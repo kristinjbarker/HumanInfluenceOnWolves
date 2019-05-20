@@ -72,30 +72,32 @@
     
     #### Wolf, Pack, and Collar Information #### 
     
-        # all GPS collar data
-        gpsRaw <- read.csv(paste0(datDir, "\\Wolf\\wolfHistoricCleaned.csv"))
-        wolfDatRaw <- read.csv(paste0(datDir, "\\Wolf\\CaptureAndCollarInfo\\wolf_metadata.csv"))
-        
-        # all GPS collar data made spatial (WGS84 lat/longs)
-        gpsLL <- SpatialPointsDataFrame(
-          data.frame("x" = as.numeric(gpsRaw$Longitude), "y" = as.numeric(gpsRaw$Latitude)),
-            gpsRaw, proj4string = latlong)
-        
-        # all wolf collar locations from 2019 winter field study (to delineate study area)
-        sa2019 <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
-        sa2019 <- filter(sa2019, !is.na(UTMX))
-        
-        # above, spatial (UTMs) reprojected to lat-longs
-        saUTM <- SpatialPointsDataFrame(
-          data.frame("x" = as.numeric(sa2019$UTMX), "y" = as.numeric(sa2019$UTMY)),
-            sa2019, proj4string = utm) 
-        saLL <- spTransform(saUTM, latlong)
-        
-         
-        # quick n dirty trimming down of available locations
-        gpsAOI <- crop(gpsLL, extent(saLL)) # just historic wolf locs in same extent as 2019 winter wolf locs
-        gpsAOIrast <- spTransform(gpsAOI, latlongrast) # to crop rasters without reprojecting giant file first
-        gpsAOIutm <- spTransform(gpsAOI, utm)
+        # GPS collar data from areas and times of interest (from dataPrepWolf.R)
+    
+    
+        # gpsRaw <- read.csv(paste0(datDir, "\\Wolf\\wolfHistoricCleaned.csv"))
+        # wolfDatRaw <- read.csv(paste0(datDir, "\\Wolf\\CaptureAndCollarInfo\\wolf_metadata.csv"))
+        # 
+        # # all GPS collar data made spatial (WGS84 lat/longs)
+        # gpsLL <- SpatialPointsDataFrame(
+        #   data.frame("x" = as.numeric(gpsRaw$Longitude), "y" = as.numeric(gpsRaw$Latitude)),
+        #     gpsRaw, proj4string = latlong)
+        # 
+        # # all wolf collar locations from 2019 winter field study (to delineate study area)
+        # sa2019 <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
+        # sa2019 <- filter(sa2019, !is.na(UTMX))
+        # 
+        # # above, spatial (UTMs) reprojected to lat-longs
+        # saUTM <- SpatialPointsDataFrame(
+        #   data.frame("x" = as.numeric(sa2019$UTMX), "y" = as.numeric(sa2019$UTMY)),
+        #     sa2019, proj4string = utm) 
+        # saLL <- spTransform(saUTM, latlong)
+        # 
+        #  
+        # # quick n dirty trimming down of available locations
+        # gpsAOI <- crop(gpsLL, extent(saLL)) # just historic wolf locs in same extent as 2019 winter wolf locs
+        # gpsAOIrast <- spTransform(gpsAOI, latlongrast) # to crop rasters without reprojecting giant file first
+        # gpsAOIutm <- spTransform(gpsAOI, utm)
 
  
         
@@ -162,11 +164,21 @@
         
         
         # from county
-        motoRaw3 <- st_read(paste0(datDir, "/Human/Roads/Trans_MVUM_Roads_2018.shp"))
+        motoRaw3 <- st_read(paste0(datDir, "/Human/Roads/roadcl_segmented.shp"))
+        plot(motoRaw3)
+        
+        
+        # snowmobile trails from jason
+        sledRaw <- st_read(paste0{datDir, "/Human/"})
         
         
         
     #### Non-motorized Use Areas ####      
+        
+        
+        nonmotoRaw <- st_read(paste0(datDir, "/Human/RecAccess/Winter_travel_restrictions_November_2016.shp"))
+        plot(nonmotoRaw)
+        
         
       
           
