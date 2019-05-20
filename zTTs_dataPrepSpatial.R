@@ -52,6 +52,168 @@
         # 1 wolf 2004-2004, 2 wolves 2006, 3 wolves 2007, 4 wolves 2008, then plenty 2009 on
         
         
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+        
+        ## code from before you cleaned up the data ##
+        
+        
+        length(unique(wolfDatRaw$Wolf))
+        wolfDatRawGPS <- wolfDatRaw[grepl("GPS", wolfDatRaw$Collar.Type), ]
+        length(unique(wolfDatRawGPS$Wolf))
+        
+        # all GPS collar data made spatial (WGS84 lat/longs)
+        gpsLL <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(gpsRaw$Longitude), "y" = as.numeric(gpsRaw$Latitude)),
+            gpsRaw, proj4string = latlong)
+        
+        # all wolf collar locations from 2019 winter field study (to delineate study area)
+        sa2019 <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
+        sa2019 <- filter(sa2019, !is.na(UTMX))
+        
+        # above, spatial (UTMs) reprojected to lat-longs
+        saUTM <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(sa2019$UTMX), "y" = as.numeric(sa2019$UTMY)),
+            sa2019, proj4string = utm) 
+        saLL <- spTransform(saUTM, latlong)
+        
+
+        length(unique(saLL$Year))
+        length(unique(saLL$packHistDat))        
+        
+         
+        # quick n dirty trimming down of available locations
+        gpsAOI <- crop(gpsLL, extent(saLL)) # just historic wolf locs in same extent as 2019 winter wolf locs
+        gpsAOIrast <- spTransform(gpsAOI, latlongrast) # to crop rasters without reprojecting giant file first
+        gpsAOIutm <- spTransform(gpsAOI, utm)
+        
+        # packs, indivs, and years from trimmed locations
+        wolfAOI <- data.frame(gpsAOI@data) # just the data from that spatial file
+        wolfAOI$Pack <- trimws(wolfAOI$Pack) # fix annoying trailing ws for LGV
+        
+        # don't bother with vhf because not comparable to gps
+        wolfGPS <- wolfDatRaw[grepl("GPS", wolfDatRaw$Collar.Type), ] # only use gps data
+        wolfGPS <- droplevels(wolfGPS) # kill stored factor levels
+        wolfGPS$Pack <- trimws(wolfGPS$Pack) # fix annoying trailing ws for LGV
+        
+        
+        # identify wolves, packs, and years in trimmed data
+        trim <- wolfAOI %>%
+          dplyr::select(Wolf, Pack, Year) %>%
+          distinct() %>%
+          left_join(wolfGPS, by = "Wolf") %>%
+          rename(packHistDat = Pack.x, packMetadat = Pack.y)
+        table(trim$packHistDat, trim$Year) # 1 wolf 2004-2004, 2 wolves 2006, 3 wolves 2007, 4 wolves 2008, plenty 2009 on
+        
+        # identify wolf-years of interest, number of years per wolf and per pack
+        wolfYrDat <- dplyr::select(trim, Wolf, Year, packHistDat) %>% 
+          distinct() %>% 
+          group_by(Wolf) %>%
+          mutate(nYrWolf = n()) %>%
+          ungroup() %>%
+          mutate(wolfYr = paste0(Wolf, Year))
+        wolfYrs <- dplyr::select(wolfYrDat, wolfYr)
+        
+        length(unique(wolfYrs$Wolf))
+        length(unique(wolfYrs$Year))
+        length(unique(wolfYrs$packHistDat))
+        # 50 wolves in 12 packs over 13 years. fuckin a.
+        # i'm sure it'll be less after i look at the actual data...
+        
+        
+        # format raw wolf data for subsetting to just wolves in years/areas of interest
+       gpsFmt <- gpsRaw %>% 
+         mutate(wolfYr = paste0(Wolf, Year)) %>%
+         semi_join(wolfYrs, "wolfYr")
+       length(unique(gpsFmt$Wolf))
+       length(unique(gpsFmt$Year))
+       # cool, still 50 wolves over 13 years
+       
+       # make subsetted data spatial
+       gpsAOIll <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(gpsFmt$Longitude), "y" = as.numeric(gpsFmt$Latitude)),
+            gpsFmt, proj4string = latlong)
+       gpsAOIaea <- spTransform(gpsAOIll, crs(elev)) # kjb need to fix this
+       plot(elev); plot(gpsAOIaea, add = TRUE)
+       plot(gpsAOIaea); plot(elev, add = T)
+
+       
+              
+       # good lord, this wolf data is all over the place
+       # need to subset better
+       
+       
+       # first check whether it wors like you think, AND not OR
+             
+      d1 <- data_frame(
+        x = c(1, 2, 3),
+        y = c("a", "b", "c"),
+        a = rnorm(3)
+        )
+      
+      d2 <- data_frame(
+        x2 = c(1, 3, 6),
+        y2 = c("a", "b", "c"),
+        b = rnorm(3)
+        )
+      
+      left_join(d1, d2, by = c("x" = "x2", "y" = "y2"))
+      semi_join(d1, d2, c("x" = "x2", "y" = "y2"))
+      # yes it's an AND, damn
+             
+
+       # check stuff in arc, sigh
+      writeRaster(elev, file = paste0(datDir, "//Land//DEM//elevCrop.tif"))
+      # ok the cropped elev dem extends too far south, that's part of the problem
+      # but not all of it because i also have way too mich wolf data north and northeast
+        
+      
+      # mmk yeah let's just spit out individual shapefiles and check them in arcmap, seems quickest
+      
+      
+        
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+      
+      
+      # investigating duplicate wolfIDs per yr
+      z <- wolfYrsMaybe[duplicated(wolfYrsMaybe$wolfYr), ]
+      zz <- as.character(wolfYrsMaybe[duplicated(wolfYrsMaybe$wolfYr), "wolf"])
+      d1 <- gpsFmt[gpsFmt$Wolf == zz[1], ] %>% mutate(Date = mdy(Date))
+      d2 <- gpsFmt[gpsFmt$wolfYr == "799M2014", ] %>% mutate(Date = mdy(Date))
+      d3 <- gpsFmt[gpsFmt$wolfYr == "799M2016", ] %>% mutate(Date = mdy(Date))  
+        
+        
+        
+                  wolfFmt3 <- wolfRaw %>%
+            filter(grepl("GPS", Collar.Type)) %>%
+            # remove row number
+            dplyr::select(-c(Number)) %>%
+            # rename some columns
+            rename(wolf = Wolf,
+                   packCap = Pack,
+                   capUTMX = UTM_X,
+                   capUTMY = UTM_Y,
+                   capDate = CaptureDate,
+                   capLoc = CaptureLocation,
+                   collarType = Collar.Type,
+                   transEnd = Dropoff..mort.date,
+                   fate = Drop...Mort...Unknown.) %>%
+            # add capture year and wolf-year; make "?"s into Unknowns
+            mutate(capYr = substr(capDate, nchar(as.character(capDate)) - 3, nchar(as.character(capDate))),
+                   wolfYr = paste0(wolf, capYr),
+                   fate = ifelse(fate == "?", "Unk", paste(fate)),
+                   transEnd = ifelse(transEnd == "?", "Unk", paste(transEnd))) %>%
+            # remove duplicate capture entry for 565F
+            filter(if(wolfYr == "565F2009") !is.na(capUTMX))
+        
+        
+        
+        
+        
+        
+        
+        
         ##### to figure out why some packs are different between data sources ####
         packFix <- trim
         packFix$CaptureDate <- as.character(packFix$CaptureDate)
