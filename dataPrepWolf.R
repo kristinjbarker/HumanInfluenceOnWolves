@@ -35,6 +35,7 @@
       "sp",            ## spatial work
       "sf",            ## for spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
+      "adehabitatHR"   ## estimate home ranges
       "dplyr")         ## data manipulation and general awesomeness
     
     
@@ -136,9 +137,13 @@
           gpsFmt <- locsRaw %>%
             # remove extraneous columns
             dplyr::select(-c(Number, X.1)) %>%
-            # add wolf-year; fix trailing whitespace in LGV
-            mutate(Pack = trimws(Pack),
-                   wolfYr = paste0(Wolf, Year)) 
+            # define winter; add wolf-year; fix trailing whitespace in LGV
+            mutate(winter = ifelse(Month <= 3, 1, 0),
+                   Pack = trimws(Pack),
+                   wolfYr = paste0(Wolf, Year)) %>%
+            # only use winter locations for analysis
+            filter(winter == 1)
+          gpsFmt <- droplevels(gpsFmt)
 
           # make it spatial
           gpsLl <- SpatialPointsDataFrame(
@@ -148,57 +153,111 @@
           # remove wolves clearly outside study area
           gpsSa <- crop(gpsLl, extent(saLL))
           
-          # add capture info
-          gpsSa@data <- gpsSa@data %>%
-            left_join(wolfFmt, by = "wolfYr")
-          
+
           # identify wolves and wolf-years for consideration of inclusion in analysis
           wolfYrsPrelim <- unique(gpsSa@data$wolfYr)
-          wolvesPrelim <- unique(gpsSa@data$wolf)
+          wolvesPrelim <- unique(gpsSa@data$Wolf)
           
-          # export csv to manually update with whether wolf will be included
-          wolfYrsMaybe <- data.frame(wolfYr = wolfYrsPrelim) %>%
-            mutate(incl = NA) %>%
-            left_join(wolfFmt, by = "wolfYr")
-          write.csv(wolfYrsMaybe, file = "wolfYrs_potential.csv", row.names = F)
-          
-          
-          # export shapefile of each wolf-year's locations (to see which are in study area)
-          for (i in 1:length(wolfYrsPrelim)) {
-            w <- wolfYrsPrelim[i]
-            gpsW <- gpsLl@data[gpsSa@data$wolfYr == w, ]
-            gpsW <- droplevels(gpsW)
-            sfW <- st_as_sf(gpsW, coords = c("Longitude", "Latitude"), crs = paste(ll))
-            st_write(sfW, paste0("../Data/Wolf/indivShps/", w, "prelim.shp"), delete_layer = TRUE)
-          }
-          
-          
+          # # export csv to manually update with whether wolf will be included
+          # wolfYrsMaybe <- data.frame(wolfYr = wolfYrsPrelim) %>%
+          #   mutate(incl = "", locsOut = "") %>%
+          #   left_join(wolfFmt, by = "wolfYr")
+          # write.csv(wolfYrsMaybe, file = "wolfYrs_potential.csv", row.names = F)
+          # 
+          # 
+          # # export shapefile of each wolf-year's locations (to see which are in study area)
+          # for (i in 1:length(wolfYrsPrelim)) {
+          #   w <- wolfYrsPrelim[i]
+          #   gpsW <- gpsLl@data[gpsSa@data$wolfYr == w, ]
+          #   gpsW <- droplevels(gpsW)
+          #   sfW <- st_as_sf(gpsW, coords = c("Longitude", "Latitude"), crs = paste(ll))
+          #   st_write(sfW, paste0("../Data/Wolf/indivShps/", w, "prelim.shp"), delete_layer = TRUE)
+          # }
+          # 
+          # 
+          # 
         
-        
-        
+          # read back in file telling which wolves included
+          wolfYrsAll <- read.csv("wolfYrs_potential_upd.csv")
+          wolfYrs <- filter(wolfYrsAll, incl == "y") # 34 wolf-yrs
+          length(unique(wolfYrs$wolf)) # 14 wolves
+          length(unique(wolfYrs$packCap)) # 6 packs
+          wolfYrsList <- as.character(unique(wolfYrs$wolfYr))
+          
+          
+          # filter wolf locs to only the wolfYrs you identified to include
+          locs <- semi_join(gpsFmt, dplyr::select(wolfYrs, wolfYr), by = "wolfYr")
+          locs <- droplevels(locs)
+          
+          # make them spatial
+          locsSpat <- SpatialPointsDataFrame(
+            data.frame("x" = locs$X, "y" = locs$Y),
+            locs, proj4string = utm)
+          
+          
+          
+        #### Delineate winter home range for each individual ####    
+          
+          
+          wolfYrsUDs <- kernelUD(locsSpat[ ,"wolfYr"], h = "href", same4all = FALSE)
+          wolfYrsHRs <- getverticeshr(wolfYrsUDs, percent = 95)
+          plot(wolfYrsHRs)
+          
+          
     
-        
-       
-      ## export shapefiles of wolf-year locations to decide which to include
-      
-      for (i in 1:nrow(wolfYrs)) {
-        
-        wy <- as.character(wolfYrs[i, "wolfYr"])
-        y <- substr(wy, nchar(wy) - 3, nchar(wy))
-        w <- sub(y, "", wy)
-        
-        wDat <- filter(gpsFmt, Wolf == w)
-        
-        # split by wolfYr not just wolf
-        #prob add wolfYr to gpsFmt first
-        
-      }
-       
+          
+          
+        #### Generate 5 available locations for each used location ####
+          
+          
+          ## create blank df to store results in
+          locsUA <- data.frame(matrix(NA, nrow = 0, ncol = 4))
+          colnames(locsUA) <- c("X", "Y", "Used", "wolfYr")
+          
 
-        
-        
+          for (i in 1:length(wolfYrsList)) {
+            
+            # identify individual
+            w <- wolfYrsList[i]
+            
+            # identify its locations
+            wLocs <- filter(locs, wolfYr == w)
+            wLocs$Used <- 1
+
+            # calculate number of random locations to generate (5:1 used:avail)
+            nLocs <- NROW(wLocs)
+            nRndm <- nLocs * 5
+            
+            # identify HR polygon to sample from
+            wHR <- wolfYrsHRs[which(wolfYrsHRs@data$id == w),]
+            
+            # generate random locations
+            rndmSpat <- spsample(wHR, n = nRndm, "random") # not sure this is the right function
+            
+            # format random locations to combine with recorded locations
+            rndmDat <- data.frame(rndmSpat)
+            colnames(rndmDat) <- c("X", "Y")
+            rndmDat$Used <- 0
+            rndmDat$wolfYr <- w
+            
+            # combine random and recorded locations
+            wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr"))
+            wDat <- rbind(wLocsOnly, rndmDat)
+            
+            # add to master dataframe
+            locsUA <- rbind(locsUA, wDat)
+
+          }
+
+                   
+          # export wolf locs to use in analysis
+          write.csv(locsUA, file = "wolfLocs-UsedAvail.csv", row.names = F)
+          
+          
+          
          
         
+          
     ##### to figure out why some packs are different between data sources ####
         
         
