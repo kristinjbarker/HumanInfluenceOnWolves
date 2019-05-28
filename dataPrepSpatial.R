@@ -54,10 +54,14 @@
   
   #### Define spatial projections ####
     
-    latlong <- CRS("+init=epsg:4326") # WGS 84
+    ll <- CRS("+init=epsg:4326") # WGS 84
     utm <- CRS("+init=epsg:3742") # NAD83(HARN)/UTMzone12N 
-    latlongrast <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
+    aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
     
+    
+  #### Increase memory limit ####
+    
+    memory.limit(size = 7500000)
  
 
 ################################################################################################## #  
@@ -68,52 +72,31 @@
 ####   | RAW DATA |  ####
 ### ### ### ### ### ### #
  
+    
+    
+    ## Study area (shp manually created in ArcMap) 
+    saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+        
+        
+    ## Canopy cover     
+    canRaw <- raster(paste0(datDir, "/Land/CanopyCover/NLCD/nlcd2011_usfs_conus_canopy_cartographic.img"))
 
+    
+    ## DEM 
+    demRaw <- raster(paste0(datDir, "\\Land\\DEM\\SRTM_Cody_Albers.tif"))
+
+    
+    ## Landcover
+    lcRaw <- raster(paste0(datDir, "//Land//LandcoverType//NLCD//", "nlcd_2011_landcover_2011_edition_2014_10_10.img"))
+    lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv")) 
         
-        
-    #### Canopy Cover #### 
-        
-        
-        canRaw <- raster(paste0(datDir, "/Land/CanopyCover/NLCD/nlcd2011_usfs_conus_canopy_cartographic.img"))
-        can <- crop(canRaw, extent(saAEA))
+    
+    ## Buildings and Structures
+    strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
+
+
  
-        
-        
-        
-        
-    #### DEM ####   
-        
-        demRaw <- raster(paste0(datDir, "\\Land\\DEM\\SRTM_Cody_Albers.tif"))
-        elev <- crop(demRaw, extent(saAEA))
-        asp <- terrain(elev, opt='aspect')
-        rug <- terrain(elev, opt='tri')
-        
-        
-        
-    #### Landcover ####
-        
-        
-        lcRaw <- raster(paste0(datDir, "//Land//LandcoverType//NLCD//", "nlcd_2011_landcover_2011_edition_2014_10_10.img"))
-        lc <- crop(lcRaw, extent(saAEA))
-
-        lcLegend <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv"))        
-
-
-        
-        
-    #### Buildings and Structures ####
-        
-        bldgsRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
-        bldgs <- st_crop(bldgsRaw, extent(gpsAOI))
-        plot(bldgs, add = TRUE)
-
-       
-            
-
-        
-        
-    #### Motorized Use Areas ####         
-        
+    ## Motorized Use Areas
         
         # from owen
         motoRaw <- st_read(paste0(datDir, "/Human/Roads/roads_GYEandWY_Tiger2016_AEA.shp"))
@@ -137,33 +120,69 @@
         
         
         # snowmobile trails from jason
-        sledRaw <- st_read(paste0{datDir, "/Human/"})
+        sledRaw <- st_read(paste0(datDir, "/Human/"))
         
         
         
-    #### Non-motorized Use Areas ####      
-        
-        
-        nonmotoRaw <- st_read(paste0(datDir, "/Human/RecAccess/Winter_travel_restrictions_November_2016.shp"))
-        plot(nonmotoRaw)
-        
-        
-      
-          
-        
-    #### Prey Distribution ####  
-        
-        
-                
-        
-    #### Supplemental Feeding Areas ####    
-        
+    ## Non-motorized use areas
+    recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
+    recLegend <- recRaw@data %>%
+      dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
+      distinct() %>%
+      rename(recCol = MapColor, recMoto = Wheeled_Ve, recSled = Over_Snow_, recNonmoto = Non_Motori)
+
 
         
+    ## Prey Distribution
+                  
         
-        
-        
-        
+    ## Supplemental Feeding Areas
+   
+    
+         
+
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### ### ### ### ###    
+####   | CROPPED, PROJECTED, RESOLUTION-ED DATA |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ###   
+    
+
+
+    ## Study area, in other projections
+    saAEA <- st_transform(saLL, paste(aea))
+    saUTM <- st_transform(saLL, paste(utm))
+    
+    
+    #### Crop all to study area ####
+    
+    canCrop <- crop(canRaw, extent(saAEA)) #### KRISTIN FIX ME ####
+    elevCrop <- crop(demRaw, extent(saAEA))
+    lcCrop <- crop(lcRaw, extent(saAEA))
+    strucCrop <- st_crop(strucRaw, extent(saLL))
+    motoCrop
+    recCrop <- crop(recRaw, extent(saUTM))
+    preyCrop
+    feedCrop
+    
+    
+    #### Project all to UTMs (and get aspect and ruggedness from cropped DEM) ####
+    
+    
+    canUTM <- projectRaster(canCrop, utm)
+    elevUTM <- projectRaster(elevCrop, crs = utm)
+    aspUTM <- terrain(elevUTM, opt = 'aspect')
+    rugUTM <- terrain(elevUTM, opt = 'tri')
+    lcUTM <- projectRaster(lcCrop, crs = utm)
+    strucUTM <- st_transform(strucCrop, paste(utm))
+    motoUTM
+    recUTM <- spTransform(recCrop, utm)
+    preyUTM
+    feedUTM
+   
+     
         
 ################################################################################################## #  
   
