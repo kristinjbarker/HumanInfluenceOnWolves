@@ -35,7 +35,7 @@
       "sp",            ## spatial work
       "sf",            ## for spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
-      "adehabitatHR"   ## estimate home ranges
+      "adehabitatHR",   ## estimate home ranges
       "dplyr")         ## data manipulation and general awesomeness
     
     
@@ -86,19 +86,25 @@
         
         ## collar data from cluster study 2019 (to delineate study area) ##
           
-          # all collar data
-          sa2019 <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
+          # # all collar data
+          # sa2019 <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
+          # 
+          # # only successfully recorded locations
+          # sa2019 <- filter(sa2019, !is.na(UTMX))  
+          # 
+          # # recorded locations in each spatial projection
+          # saUTM <- SpatialPointsDataFrame(data.frame("x" = as.numeric(sa2019$UTMX), "y" = as.numeric(sa2019$UTMY)), sa2019, proj4string = utm) 
+          # saLL <- spTransform(saUTM, ll)
+          # saAEA <- spTransform(saUTM, aea)
+          # 
+          # 
           
-          # only successfully recorded locations
-          sa2019 <- filter(sa2019, !is.na(UTMX))  
           
-          # recorded locations in each spatial projection
-          saUTM <- SpatialPointsDataFrame(data.frame("x" = as.numeric(sa2019$UTMX), "y" = as.numeric(sa2019$UTMY)), sa2019, proj4string = utm) 
-          saLL <- spTransform(saUTM, ll)
-          saAEA <- spTransform(saUTM, aea)
+          # Study area in each projection
+          saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+          saAEA <- st_transform(saLL, paste(aea))
+          saUTM <- st_transform(saLL, paste(utm))  
           
-          
-      
       #### trim wolf locations to potentially usable ones ####
           
           
@@ -131,6 +137,7 @@
           wolfFmt <- droplevels(wolfFmt)
          
           
+        
         ## clean and format gps data ##
           
           
@@ -167,15 +174,18 @@
           # 
           # # export shapefile of each wolf-year's locations (to see which are in study area)
           # for (i in 1:length(wolfYrsPrelim)) {
+          #   # identify individual
           #   w <- wolfYrsPrelim[i]
-          #   gpsW <- gpsLl@data[gpsSa@data$wolfYr == w, ]
+          #   # subset that indiv's gps data  
+          #   gpsW <- gpsSa@data[gpsSa@data$wolfYr == w, ]
           #   gpsW <- droplevels(gpsW)
+          #   # make spatial and export for visual check in arcmap
           #   sfW <- st_as_sf(gpsW, coords = c("Longitude", "Latitude"), crs = paste(ll))
           #   st_write(sfW, paste0("../Data/Wolf/indivShps/", w, "prelim.shp"), delete_layer = TRUE)
           # }
           # 
-          # 
-          # 
+
+
         
           # read back in file telling which wolves included
           wolfYrsAll <- read.csv("wolfYrs_potential_upd.csv")
@@ -260,19 +270,25 @@
           
     ##### to figure out why some packs are different between data sources ####
         
+          
+        # pack assignments from capture
+        wolfDatCap <- wolfFmt
+        wolfDatCap$capDate <- as.character(wolfDatCap$capDate)
+        wolfDatCap$yrMetadat = substr(wolfDatCap$capDate, nchar(wolfDatCap$capDate)-3, nchar(wolfDatCap$capDate))
         
-        packFix <- trim
-        packFix$CaptureDate <- as.character(packFix$CaptureDate)
-        packFix$yrMetadat = substr(packFix$CaptureDate, nchar(packFix$CaptureDate)-3, nchar(packFix$CaptureDate))
-        packFix <- packFix %>%
-          filter(packHistDat != packFix$packMetadat) %>%
-          filter(!is.na(Wolf)) %>%
-          rename(
-            yrHistDat = Year, 
-            transEnd = Dropoff..mort.date,
-            Fate = Drop...Mort...Unknown.) %>%
-          dplyr::select(Wolf, yrHistDat, packHistDat, yrMetadat, packMetadat, Sex, Age, CaptureDate, CaptureLocation,
-                        transEnd, Fate, Collar.Type, UTM_X, UTM_Y)
+        # pack assignments from gps collar data file
+        wolfDatHist <- gpsLl@data %>%
+          dplyr::select(Wolf, Pack, Year) %>%
+          distinct() %>%
+          rename(wolf = Wolf, packHistDat = Pack, yrHistDat = Year)
+        
+        # identify non-matching pack assignments
+        packFix <- wolfDatCap %>%
+          left_join(wolfDatHist) %>%
+          filter(!is.na(packHistDat)) %>%
+          filter(!is.na(packCap)) %>%
+          filter(packHistDat != packCap) 
+        
         # investigate me  
         write.csv(packFix, file = "../Data/Wolf/wolfPackDiscrepancies.csv", row.names = FALSE)
         
