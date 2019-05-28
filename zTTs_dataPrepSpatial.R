@@ -306,3 +306,87 @@
         test2 <- crop(canRaw, extent(test))
         # well it's a new error message so i got that going for me which is nice
         
+        
+        
+        
+        
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### LANDCOVER TYPE INTEGER INVESTIGATION ####
+        
+        # ran dataPrepSpatial thru saLL read-in
+        saAEA <- st_transform(saLL, paste(aea))
+    
+        lcRaw <- raster(paste0(datDir, "/Land/LandcoverType/NLCD/nlcd_2011_landcover_2011_edition_2014_10_10.img"))
+        crs(lcRaw) # aea
+        
+        lcCrop <- crop(lcRaw, extent(saAEA))
+        plot(lcCrop, legend = TRUE)
+    
+        lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv"))    
+        unique(lcLegendRaw$Value) # these are the numbers you're looking for
+        
+        unique(lcCrop@data@attributes$NLCS.2011.Land.Cover.Class) # NULL
+        View(lcCrop@data) # k
+        View(lcCrop@data@attributes) # k
+        View(lcCrop@data@attributes[[1]]$NLCD.2011.Land.Cover.Class)
+        
+        test <- getValues(lcCrop)
+        unique(test)
+        unique(as.integer(test))
+        sort(unique(as.integer(test)))
+        unique(lcLegend$Value)
+        
+        # actual landcover raster is missing 51, 72, 73, 74 (which are the alaska-only ones, perfect)
+        # so values are correct; you just were looking at something else I guess
+        
+        View(lcCrop@data)
+        
+        # ok i don't understand where the getValues is pulling from, but the numbers it gets are correct
+        # so try extracting values for some points and see how that goes
+        
+        wolfLocs <- read.csv("wolfLocs-UsedAvail.csv")
+        locsUTM <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(wolfLocs$X), "y" = as.numeric(wolfLocs$Y)),
+          wolfLocs, proj4string = utm)
+        locsAEA <- spTransform(locsUTM, aea)
+        
+        extLc <- extract(lcCrop, locsAEA)
+        
+        locsAEA$lcVal <- extract(lcCrop, locsAEA) # noice
+        
+        lcTypes <- lcLegendRaw %>%
+          rename(lcVal = Value, lcType = Classification, lcClass = GenericClass) %>%
+          dplyr::select(lcVal, lcType, lcClass)
+        
+        locsAEA@data <- left_join(locsAEA@data, lcTypes, by = "lcVal")
+        View(locsAEA@data)
+        
+        used <- filter(locsAEA@data, Used == 1)
+        table(used$lcClass)
+        
+    
+        
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### NONMOTO DATA ####
+        
+        wolfLocs <- read.csv("wolfLocs-UsedAvail.csv")
+        locsUTM <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(wolfLocs$X), "y" = as.numeric(wolfLocs$Y)),
+          wolfLocs, proj4string = utm)  
+        
+        test <- locsUTM@data
+        testNonmoto <- nonmotoUTM$MapColor
+        test$nonmoto <- extract(nonmotoUTM, locsUTM)
+        test2 <- extract(nonmotoUTM, locsUTM)
+        
+        
+    
+
+
+        
