@@ -54,9 +54,9 @@
   
   #### Define spatial projections ####
     
-    latlong <- CRS("+init=epsg:4326") # WGS 84
+    ll <- CRS("+init=epsg:4326") # WGS 84
     utm <- CRS("+init=epsg:3742") # NAD83(HARN)/UTMzone12N 
-    latlongrast <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
+    aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
     
  
 
@@ -118,6 +118,28 @@
     #### Extract spatial data at each wolf or kill location ####
     
     extSpat <- extract(spat, locsSpatAEA, buffer = NULL) # consider buffering points
+    
+    
+    
+    ## below code is from TTs dealing with landcover
+    ## it extracts lc values per wolf loc and correctly identifies the landcover type
+    
+        # wolfLocs <- read.csv("wolfLocs-UsedAvail.csv")
+        # locsUTM <- SpatialPointsDataFrame(
+        #   data.frame("x" = as.numeric(wolfLocs$X), "y" = as.numeric(wolfLocs$Y)),
+        #   wolfLocs, proj4string = utm)
+        # locsAEA <- spTransform(locsUTM, aea)
+        # 
+        # extLc <- extract(lcCrop, locsAEA)
+        # 
+        # locsAEA$lcVal <- extract(lcCrop, locsAEA) # noice
+        # 
+        # lcTypes <- lcLegendRaw %>%
+        #   rename(lcVal = Value, lcType = Classification, lcClass = GenericClass) %>%
+        #   dplyr::select(lcVal, lcType, lcClass)
+        # 
+        # locsAEA@data <- left_join(locsAEA@data, lcTypes, by = "lcVal")
+
     
     
     #### combine with location data ####
