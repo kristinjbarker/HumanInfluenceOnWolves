@@ -31,7 +31,8 @@
       "raster",        ## for parts of justin clapp's code
       "maps",          ## for parts of justin clapp's code
       "maptools",      ## for cluster algorithm & kmlPoints
-      "rgdal",         ## for cluster algorithm & spatial/shapefile work 
+      "rgdal",         ## for cluster algorithm & spatial/shapefile work
+      "rgeos",         ## gDifference (clip) - nevermind, use erase to retain sf
       "sp",            ## spatial work
       "sf",            ## for spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
@@ -74,10 +75,9 @@
  
     
     
-    ## Study area (shp manually created in ArcMap) and USFS boundaries (for clipping road layers)
+    ## Study area and USFS boundaries (for clipping layers)
     saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
-    fs <- st_read(paste0(datDir, "/Land/Ownership/LandBtforest.shp"))
-        
+
         
     ## Canopy cover     
     canRaw <- raster(paste0(datDir, "/Land/CanopyCover/NLCD/nlcd2011_usfs_conus_canopy_cartographic.img"))
@@ -95,14 +95,10 @@
     ## Buildings and Structures
     strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
 
-
  
     ## Motorized Roads
-    motoCntyRaw <- st_read(paste0(datDir, "/Human/Roads/WinterRoads_AllCounties.shp"))
-    motoBtRaw <- st_read(paste0(datDir, "/Human/Roads/BTWinterTrails_Final_2019.shp"))
-    motoShoRaw <- st_read(paste0(datDir, "/Human/Roads/Sho_MotorizedTrails.shp"))
-    motoDotRaw <- st_read(paste0(datDir, "/Human/Roads/WYDOT_Roadway_Names.shp"))
-        
+    motoRaw <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoads')
+
         
     ## Recreational use restrictions
     recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
@@ -133,61 +129,46 @@
 
 
     ## Study area, in other projections
-    saAEA <- st_transform(saLL, paste(aea))
-    saUTM <- st_transform(saLL, paste(utm))
-    
-    
-    
-    #### Combine & process motorized road data ####    
-    
-    
-      ## remove county data where it overlaps with the more accurate USFS data
-      motoCnty <- st_transform(motoCntyRaw, crs = st_crs(fs))
-      motoCntyNoFS <- st_difference(motoCnty, fs)
       
-      ## combine fs data with remaining county data
-      motoBt <- st_transform(motoBtRaw, crs = st_crs(fs))
-      motoSho <- st_transform(motoShoRaw, crs = st_crs(fs))  
+      saAEA <- st_transform(saLL, paste(aea))
+      saUTM <- st_transform(saLL, paste(utm))
       
-      ## use WYDOT data to identify highways passing through FS land
-      motoDot <- st_transform(motoDotRaw, st_crs(fs))
-      motoDotFS <- st_intersection(st_zm(motoDot), fs)  # no idea what an m geometry is
       
-      ## combine all moto data
-      motoZ <- st_union(motoCntyNoFS, motoBt)
-      motoY <- st_union(motoZ, motoSho)
-      moto <- st_union(motoY, motoDotFS)
-      
-      st_write(moto, paste0(datDir, "/Human/Roads/roadsWinter.shp"), delete_layer = TRUE)
-    
-    
     
     #### Crop all to study area ####
     
-    canCrop <- crop(canRaw, extent(saAEA)) 
-    elevCrop <- crop(demRaw, extent(saAEA))
-    lcCrop <- crop(lcRaw, extent(saAEA))
-    strucCrop <- st_crop(strucRaw, extent(saLL))
-    # motoCrop
-    recCrop <- crop(recRaw, extent(saUTM))
-    # preyCrop
-
-    
+      canCrop <- crop(canRaw, extent(saAEA)) 
+      elevCrop <- crop(demRaw, extent(saAEA))
+      lcCrop <- crop(lcRaw, extent(saAEA))
+      strucCrop <- st_crop(strucRaw, extent(saLL))
+      motoCrop <- crop(motoRaw, extent(saUTM))
+      recCrop <- crop(recRaw, extent(saUTM))
+      # preyCrop
+  
+      
     #### Project all to UTMs (and get aspect and ruggedness from cropped DEM) ####
     
-    
-    canUTM <- projectRaster(canCrop, crs = utm)
-    elevUTM <- projectRaster(elevCrop, crs = utm)
-    aspUTM <- terrain(elevUTM, opt = 'aspect')
-    rugUTM <- terrain(elevUTM, opt = 'tri')
-    slopeUTM <- terrain(elevUTM, opt = 'slope')
-    lcUTM <- projectRaster(lcCrop, crs = utm)
-    strucUTM <- st_transform(strucCrop, paste(utm))
-    # motoUTM
-    recUTM <- spTransform(recCrop, utm)
-    # preyUTM
-    feedUTM <- spTransform(feedRaw, utm)
-   
+      
+      canUTM <- projectRaster(canCrop, crs = utm)
+      elevUTM <- projectRaster(elevCrop, crs = utm)
+      aspUTM <- terrain(elevUTM, opt = 'aspect')
+      rugUTM <- terrain(elevUTM, opt = 'tri')
+      slopeUTM <- terrain(elevUTM, opt = 'slope')
+      lcUTM <- projectRaster(lcCrop, crs = utm)
+      strucUTM <- st_transform(strucCrop, paste(utm))
+      motoUTM <- spTransform(motoCrop, utm)
+      recUTM <- spTransform(recCrop, utm)
+      # preyUTM
+      feedUTM <- spTransform(feedRaw, utm)
+      
+      
+      
+    #### Match resolutions so can stack ####
+      
+      
+      
+    #### Measure distance to road etc ####
+     
      
         
 ################################################################################################## #  
