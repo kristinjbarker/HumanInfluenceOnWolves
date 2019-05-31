@@ -387,6 +387,62 @@
         
         
     
-
+    
+        
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### CANOPY COVER IO ERROR ####
+        
+        # issue: error when try to crop
+        
+        # can i transform?
+        canTest <- projectRaster(canRaw, crs = utm)
+        # no, same error
 
         
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### moto rd data - combining and processing ####        
+        
+      motmoPrelim <- rbind(motoCntyNoFS, motoBt) # nope
+      motoPrelim <- union(motoCntyNoFS, motoBt) # nope
+      motoPrelim <- merge(motoBt, motoCntyNoFS) # nope
+      # try without the attached df
+      t1 <- SpatialLines(motoCntyNoFS) # nope
+      motoPrelim <- sp::merge(motoCntyNoFS, motoBt) # closer
+      motoPrelim <- merge(motoCntyNoFS, motoBt, duplicateGeoms = TRUE) # samesies
+      motoPrelim <- merge(motoCntyNoFS, motoBt, by.x = "name", by.y = "TRAIL_NAME", duplicateGeoms = TRUE) # samsesame
+      motoPrelim <- spCbind(motoCntyNoFS, motoBt) # nope. this and above are trying to add a df to a spatial obj
+      motoPrelim <- gUnion(motoCntyNoFS, motoBt) # AH FINALLY
+
+       
+      writeOGR(motoPrelim2, paste0(datDir, "/Human/Roads/roadsWinterTest.shp"), delete_layer = TRUE) 
+      
+      # oops gUnion doesn't retain df
+      z <- raster::intersect(motoCntyNoFS, motoBt) # nope
+      
+      # decided to be lazy and just add a df of sequential numbers
+      motoPrelim2 <- gUnion(motoPrelim, motoSho)
+      jenkyDf <- data.frame(ID = 1:length(motoPrelim2@lines[[1]]@Lines))
+      motoPrelimSpdf <- SpatialLinesDataFrame(motoPrelim2, data = jenkyDf)
+      
+      # export to double-check in arcmap before continuing
+      writeOGR(motoPrelimSpdf, 
+               dsn = paste0(datDir, "/Human/Roads"), 
+               layer = "winterRoadsTest", 
+               driver = "ESRI Shapefile", 
+               overwrite_layer = TRUE)
+      # confirmed.  
+      
+      ## identify WYDOT highways on USFS land
+      #  motoDotFs <- gIntersection(motoDot, fs) ## no this hangs and requires crash
+      # motoDotFs <- intersect(motoDot, fs) # no this reqs a vector
+      # maybe it's just too big? (heh. never)
+      # if this doesn't work, cut your losses and use arc
+      motoDotCrop <- crop(motoDot, extent(fs))
+      motoDotFs <- gIntersection(motoDotCrop, fs) # ha whaddaya know
+      
