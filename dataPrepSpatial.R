@@ -74,8 +74,9 @@
  
     
     
-    ## Study area (shp manually created in ArcMap) 
+    ## Study area (shp manually created in ArcMap) and USFS boundaries (for clipping road layers)
     saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+    fs <- st_read(paste0(datDir, "/Land/Ownership/LandBtforest.shp"))
         
         
     ## Canopy cover     
@@ -96,35 +97,14 @@
 
 
  
-    ## Motorized Use Areas
-        
-        # from owen
-        motoRaw <- st_read(paste0(datDir, "/Human/Roads/roads_GYEandWY_Tiger2016_AEA.shp"))
-        moto <- st_crop(motoRaw, extent(saAEA))
-        plot(elev); plot(moto, add = TRUE, main = "TIGER")
-        
+    ## Motorized Roads
+    motoCntyRaw <- st_read(paste0(datDir, "/Human/Roads/WinterRoads_AllCounties.shp"))
+    motoBtRaw <- st_read(paste0(datDir, "/Human/Roads/BTWinterTrails_Final_2019.shp"))
+    motoShoRaw <- st_read(paste0(datDir, "/Human/Roads/Sho_MotorizedTrails.shp"))
+    motoDotRaw <- st_read(paste0(datDir, "/Human/Roads/WYDOT_Roadway_Names.shp"))
         
         
-        # mvum [in progress]
-        motoRaw2 <- st_read(paste0(datDir, "/Human/Roads/Trans_MVUM_Roads_2018.shp"))
-        moto2 <- st_crop(motoRaw2, extent(gpsAOIutm))
-
-        plot(elev); plot(moto2[1], add = TRUE, main = "MVUM")
-        plot(moto2[1])
-        plot(moto2$RTE_CN)
-        
-        
-        # from county
-        motoRaw3 <- st_read(paste0(datDir, "/Human/Roads/roadcl_segmented.shp"))
-        plot(motoRaw3)
-        
-        
-        # snowmobile trails from jason
-        sledRaw <- st_read(paste0(datDir, "/Human/"))
-        
-        
-        
-    ## Non-motorized use areas
+    ## Recreational use restrictions
     recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
     recLegend <- recRaw@data %>%
       dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
@@ -137,6 +117,7 @@
                   
         
     ## Supplemental Feeding Areas
+    feedRaw <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
    
     
          
@@ -156,31 +137,56 @@
     saUTM <- st_transform(saLL, paste(utm))
     
     
+    
+    #### Combine & process motorized road data ####    
+    
+    
+      ## remove county data where it overlaps with the more accurate USFS data
+      motoCnty <- st_transform(motoCntyRaw, crs = st_crs(fs))
+      motoCntyNoFS <- st_difference(motoCnty, fs)
+      
+      ## combine fs data with remaining county data
+      motoBt <- st_transform(motoBtRaw, crs = st_crs(fs))
+      motoSho <- st_transform(motoShoRaw, crs = st_crs(fs))  
+      
+      ## use WYDOT data to identify highways passing through FS land
+      motoDot <- st_transform(motoDotRaw, st_crs(fs))
+      motoDotFS <- st_intersection(st_zm(motoDot), fs)  # no idea what an m geometry is
+      
+      ## combine all moto data
+      motoZ <- st_union(motoCntyNoFS, motoBt)
+      motoY <- st_union(motoZ, motoSho)
+      moto <- st_union(motoY, motoDotFS)
+      
+      st_write(moto, paste0(datDir, "/Human/Roads/roadsWinter.shp"), delete_layer = TRUE)
+    
+    
+    
     #### Crop all to study area ####
     
-    canCrop <- crop(canRaw, extent(saAEA)) #### KRISTIN FIX ME ####
+    canCrop <- crop(canRaw, extent(saAEA)) 
     elevCrop <- crop(demRaw, extent(saAEA))
     lcCrop <- crop(lcRaw, extent(saAEA))
     strucCrop <- st_crop(strucRaw, extent(saLL))
-    motoCrop
+    # motoCrop
     recCrop <- crop(recRaw, extent(saUTM))
-    preyCrop
-    feedCrop
-    
+    # preyCrop
+
     
     #### Project all to UTMs (and get aspect and ruggedness from cropped DEM) ####
     
     
-    canUTM <- projectRaster(canCrop, utm)
+    canUTM <- projectRaster(canCrop, crs = utm)
     elevUTM <- projectRaster(elevCrop, crs = utm)
     aspUTM <- terrain(elevUTM, opt = 'aspect')
     rugUTM <- terrain(elevUTM, opt = 'tri')
+    slopeUTM <- terrain(elevUTM, opt = 'slope')
     lcUTM <- projectRaster(lcCrop, crs = utm)
     strucUTM <- st_transform(strucCrop, paste(utm))
-    motoUTM
+    # motoUTM
     recUTM <- spTransform(recCrop, utm)
-    preyUTM
-    feedUTM
+    # preyUTM
+    feedUTM <- spTransform(feedRaw, utm)
    
      
         
