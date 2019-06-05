@@ -446,3 +446,66 @@
       motoDotCrop <- crop(motoDot, extent(fs))
       motoDotFs <- gIntersection(motoDotCrop, fs) # ha whaddaya know
       
+      
+      
+
+        
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### SNOW data - pull swe ####         
+      
+      #need to replace the comma and all characters before it with ""
+      z <- as.factor(paste((rawGC[1,1]))) # just to structure the same as in the data frame
+      z
+      gsub(",", "penis", z) # replaces comma, perf
+      gsub("^*,", "penis", z) # does nothing
+      gsub("*,", "penis", z) # only comma
+      gsub(".,", "penis", z) # still only commma
+      gsub(",", "penis", z)
+      
+      # what if it's a char
+      z <- as.character((rawGC[1,1]))
+      z
+      gsub("^.,", "penis", z)
+      # alright fuck this i'm just gonna split the string at the comma
+      
+      test <- unlist(strsplit(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values., ",", fixed = TRUE))
+      # e: non character argument
+      test <- unlist(strsplit(as.character(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values.), ",", fixed = TRUE))
+      test # null
+      test <- unlist(strsplit(as.character(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values.), "//,", fixed = TRUE))
+      test # null
+      
+      # fiiine back to reg
+      z <- as.factor(paste((rawGC[1,1]))) 
+      gsub("'\\s*,.*", "", z)
+      gsub(".*(,.*)", "", z)
+      z <- as.character((rawGC[1,1]))
+      gsub(".*(,.*)", "", z)
+      
+      
+      # ok quit being a little bitch and put some effort into this
+      
+      # figure out whether you have to make it a character or not
+      zf <- as.factor(paste((rawGC[1,1]))) 
+      zc <- as.character((rawGC[1,1]))
+      
+      # can you match any character or number or punctuation or anything
+      gsub(".*", "penis", zf) # yes. lovely.
+      
+      # now you just have to match characters before a comma
+      gsub(".*(,)", "f", zf)
+      # oh dude was that it?
+      
+      gsub(".*(,)", "", zf)
+      # yuuup
+      
+      
+      #### regex notes ####
+      
+        # . <- any character
+        # * <- any number of times
+        # () <- look for the pattern inside these
+      
