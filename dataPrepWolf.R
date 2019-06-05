@@ -242,7 +242,7 @@
             wHR <- wolfYrsHRs[which(wolfYrsHRs@data$id == w),]
             
             # generate random locations
-            rndmSpat <- spsample(wHR, n = nRndm, "random") # not sure this is the right function
+            rndmSpat <- spsample(wHR, n = nRndm, "random") 
             
             # format random locations to combine with recorded locations
             rndmDat <- data.frame(rndmSpat)

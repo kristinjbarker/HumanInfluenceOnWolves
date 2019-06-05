@@ -188,7 +188,11 @@
 ### ### ### ### ### ### ### ### ### 
 ####   | COMBINE AND EXPORT  |  ####
 ### ### ### ### ### ### ### ### ### 
- 
+
+      
+    #### export cropped elevUTM file to define grid for elk distribution estimation
+    
+      #writeRaster(elevUTM, paste0(datDir, "/Land/DEM/elevCropUTM"), format = "GTiff", overwrite = TRUE)
     
     
     #### stack code for storing ... stacks ####

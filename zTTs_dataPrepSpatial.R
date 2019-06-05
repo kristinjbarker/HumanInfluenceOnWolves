@@ -478,7 +478,7 @@
       test <- unlist(strsplit(as.character(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values.), "//,", fixed = TRUE))
       test # null
       
-      # fiiine back to reg
+      # fiiine back to regex
       z <- as.factor(paste((rawGC[1,1]))) 
       gsub("'\\s*,.*", "", z)
       gsub(".*(,.*)", "", z)
@@ -486,7 +486,7 @@
       gsub(".*(,.*)", "", z)
       
       
-      # ok quit being a little bitch and put some effort into this
+    # ok quit being a little bitch and put some effort into this
       
       # figure out whether you have to make it a character or not
       zf <- as.factor(paste((rawGC[1,1]))) 
@@ -503,9 +503,157 @@
       # yuuup
       
       
-      #### regex notes ####
+      
+      
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+      
+      
+      #### ~ regex notes ~ ####
       
         # . <- any character
         # * <- any number of times
         # () <- look for the pattern inside these
+      
+      
+      
+   ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+    #### ELK DISTN data - generate points in certain grid cells ####   
+      
+      # playing with code from https://gis.stackexchange.com/questions/291446/generating-random-points-inside-raster-boundary-using-r
+      
+      z <- rasterToContour(is.na(grid))
+      plot(grid)
+      plot(z, add = T)
+      # ok so rastToCont just outlines the grid raster, cool
+      
+      zz <- as(st_union(st_polygonize(st_as_sf(z))), 'Spatial')
+      # gives an error
+      # and just realized this code is specific to random samples anyway
+      # switching to steal someone elses code
+      
+      
+      # now https://gis.stackexchange.com/questions/277083/how-to-generate-random-points-influenced-by-underlaying-variable-in-r
+      cell <- sample(1:ncell(grid), nrow(raw2014), prob = grid[], replace = TRUE)
+      # error bc you have NAs in your grid raster
+      
+      # let's try our own brain for once shall we?
+      
+      # 1. make your counts spatial, that seems helpful
+      z <- SpatialPointsDataFrame(data.frame("x" = raw2014$UTM_X, "y" = raw2014$UTM_Y),
+                                  raw2014, proj4string = utm)
+      xy <- c()
+        
+        
+        
+      # code to pull from
+      r = raster(matrix(1:12,3,4))
+      set.seed(23) # make this all reproducible
+      cell = sample(1:ncell(r),100, prob=r[], replace=TRUE)
+      head(cell)
+      centres = xyFromCell(r,cell)
+      View(centres)
+      str(centres)
+      # it's just numbers with attributes
+      head(centres)
+      
+      # can you change the attr yourself?
+      dimnames(centres) = c("doesThis", "shitWork")
+      # no must be list
+      
+      #make named list of xy coords from elk counts
+      t <- list(x = raw2014$UTM_X, y = raw2014$UTM_Y)
+      # duh you don't want a list
+      # you wnt a anamed vector(s?) of numbers
+      
+      tt <- c(raw2014$UTM_X, raw2014$UTM_Y)
+      names(t) <- c("x", "y")
+      
+      # mmk go back to code then figure it out
+      rx = centres[,1] + runif(nrow(centres), -0.5*res(r)[1], 0.5*res(r)[1])
+      
+      ## ooh found on another stack exchange there's a spatialgridthing
+      gridSp <- SpatialGrid(GridTopology(grd, cellsize = res(grd)), proj4string = utm)
+      # hm no several iterations of the above have failed
+      
+      # oh try new tack - https://gis.stackexchange.com/questions/43707/how-to-produce-spatial-grid-from-raster
+      g <- as(grd, 'SpatialGridDataFrame')
+      # oh wtf that was super easy
+      # mmm but that's a huge file that kils r
+      
+      
+      
+      ## take 2: now with independent thought! ##
+      
+      
+        ?spsample
+        # i think i need to remove NAs from the grid (?)
+        z <- !is.na(grd)
+        plot(z) # i have no idea why this just gave them all the same value but fuck it
+        print(object.size(grd))
+        print(object.size(z))
+        # oh interesting, removing those NAs made it a rasterlayer 
+        # which significantly incresed the size. like by orders of magnitude. 
+        # mk let's try without removing NAs then
+        
+        # first need to sample from a grid. 
+        # then figure out how to sample certain number of points per cell.
+        z <- spsample(grd, n = 10) # no. can't sample from rasterlayer
+        
+        # try making a spatial grid from which t sample
+        spGrd <- as(grd, 'SpatialGrid')
+        
+        z <- spsample(spGrd, n = 10, type = "regular")
+        plot(spGrd); plot(z, col = "red", add = T)
+        zz <- spsample(spGrd, n = 10, type = "random")
+        plot(zz, col = "blue", add = T)
+        # neato
+        zzz <- spsample(spGrd, n = 10, type = "clustered")
+        plot(zzz, col = "green", add = T)
+        
+        # oh maybe i can use an apply function to go through each grid cell
+        # and sample a certain number of points based on the elk counts
+        
+        # first make your DEM a square, this should help with the weird na thing and give full coverage (hopefully)
+        demRaw <- raster(paste0(datDir, "\\Land\\DEM\\SRTM_Cody_Albers.tif"))
+        demUTM <- projectRaster(demRaw, crs = utm)
+        saUTM <- st_transform(saLL, paste(utm))
+        elevCrop <- crop(demUTM, saUTM)
+        plot(elevCrop)
+        # oh yeah that's better
+        writeRaster(elevCrop, paste0(datDir, "/Land/DEM/elevCropUTM"), format = "GTiff", overwrite = TRUE)
+        
+        # now make it a grid to sample from
+        grd <- as(elevCrop, 'SpatialGrid')
+        
+        # sample from the grid
+        smp <- spsample(grd, n = 100, type = "random")
+        plot(smp, add = T)
+        
+        # most excellent
+        
+        # step 2: sample from certain cells
+        # step 3: sample certain number of points from certain cells
+        
+        # step 2 attempts
+        
+        # 2a. identify one specific cell
+        str(grd)
+        grd@grid@cellcentre.offset
+        grd@grid@cells.dim
+        
+        lns <- gridlines(grd)
+        plot(lns, add = T)
+        # hm. looks like your grid cells are way bigger than you thought
+        
+        # so, step 2 is to decrease the grid cell size to the resolution of the dem
+        # step 3, sample from certain cells
+        # step 4, sample certain number of points from certain cells
+        # step 5, cells and number of points from elk distn data
+
+        
+      
+      
       
