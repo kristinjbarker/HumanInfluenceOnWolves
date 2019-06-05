@@ -1,5 +1,5 @@
                       ### ### ### ### ### ###  ### ### ### ### ### ### 
-                      #    FORMATTING AND PREPATING SPATIAL DATA     #
+                      #   FORMATTING AND PREPARING WOLF GPS DATA     #
                       #   FOR ANALYSIS OF HUMAN INFLUENCE ON WOLF    #
                       #        DISTRIBUTIONS AND BEHAVIORS           #
                       #                                              #

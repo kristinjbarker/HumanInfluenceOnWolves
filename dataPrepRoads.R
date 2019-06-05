@@ -1,5 +1,5 @@
                       ### ### ### ### ### ###  ### ### ### ### ### ### 
-                      #    FORMATTING AND PREPATING ROAD DATA        #
+                      #    FORMATTING AND PREPARING ROAD DATA        #
                       #   FOR ANALYSIS OF HUMAN INFLUENCE ON WOLF    #
                       #        DISTRIBUTIONS AND BEHAVIORS           #
                       #                                              #

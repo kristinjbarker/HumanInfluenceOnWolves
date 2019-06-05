@@ -1,5 +1,5 @@
                       ### ### ### ### ### ###  ### ### ### ### ### ### 
-                      #     FORMATTING AND PREPATING SWE DATA        #
+                      #     FORMATTING AND PREPARING SWE DATA        #
                       #   FOR ANALYSIS OF HUMAN INFLUENCE ON WOLF    #
                       #        DISTRIBUTIONS AND BEHAVIORS           #
                       #                                              #
