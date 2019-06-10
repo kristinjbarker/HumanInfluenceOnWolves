@@ -37,6 +37,7 @@
       "sf",            ## for spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
       "readxl",        ## import elk count data from excel workbook
+      "adehabitatHR",  ## estimate UD of elk distribution
       "dplyr")         ## data manipulation and general awesomeness
     
     
@@ -71,62 +72,95 @@
 ################################################################################################## #  
   
     
-     
-   #### Read in raw  data ####
+
+### ### ###  ### ### ###
+####  | RAW DATA |  ####
+### ### ###  ### ### ###     
+
+
+    
+    ## elk movement barrier (refuge fence, town, etc) to remove from KDEs
+    barrierRaw <- readOGR(paste0(datDir, "\\Elk"), layer ='elkBarrierLL')
+    barrierSpdf <- spTransform(barrierRaw, utm)
+    barrier <- as(spTransform(barrierRaw, utm), 'SpatialLines')
     
     
-    ## use DEM to define grid size and extent
-    elevCrop <- raster(paste0(datDir, "/Land/DEM/elevCropUTM.tif"))
+    ## elk count data (formatted manually from excel spreadsheets sent by Aly)
+    rawElk <- read.csv(paste0(datDir, "/Elk/countsFormatted_2008-2019.csv"))
     
-    
-    ## read in elk count data from Aly 2014-2018
-    rawFile <- paste0(datDir, "/Elk/Jackson_Elk_MidWinter_TrendCounts_2014_2019.xlsx")
-    
-    ## read in each tab separately (bc diff column names etc)
-    raw2014 <- read_excel(rawFile, sheet = "Feb2014")
-    raw2015 <- read_excel(rawFile, sheet = "Feb2015")
-    raw2016 <- read_excel(rawFile, sheet = "Feb2016")
-    raw2017 <- read_excel(rawFile, sheet = "Feb2017")
-    raw2018 <- read_excel(rawFile, sheet = "Feb2018")
-    raw2019 <- read_excel(rawFile, sheet = "Feb2019")
+
     
 
     
 ################################################################################################## #  
-  
+
+
+### ### ### ### ### ### #
+####  | PREP DATA |  ####
+### ### ### ### ### ### #    
+
+
+
+    #### Format count data ####
+    elkDat <- rawElk %>%
+      mutate(
+        Date = mdy(Date),
+        Cow = ifelse(is.na(Cow), 0, Cow),
+        Calf = ifelse(is.na(Calf), 0, Calf),
+        BullMature = ifelse(is.na(BullMature), 0, BullMature),
+        BullSpike = ifelse(is.na(BullSpike), 0, BullSpike),
+        Unclassified = ifelse(is.na(Unclassified), 0, Unclassified))
     
-     
-   #### prep data ####
     
-    ## underlying grid to sample from
-    grd <- as(elevCrop, 'SpatialGrid')
-    lns <- gridlines(grd)
-    plot(lns, add = T)
-    # hm. looks like your grid cells are way bigger than you thought
+    #### Make count data spatial ####
+    elk <- SpatialPointsDataFrame(
+      data.frame("x" = elkDat$UTM_X, "y" = elkDat$UTM_Y),
+      elkDat, proj4string = utm)
     
-    # so, step 2 is to decrease the grid cell size to the resolution of the dem
-    # step 3, sample from certain cells
-    # step 4, sample certain number of points from certain cells
-    # step 5, cells and number of points from elk distn data    
-      
-    # sample from the grid - this just throws 100 points anywhere
-    smp <- spsample(grd, n = 100, type = "random")
-    plot(smp, add = T)
+    
+    # #### Export shapefile of elk counts ####
+    # writeOGR(elk,
+    #          dsn = paste0(datDir, "/Elk"),
+    #          layer = "elkCounts_2008-2019",
+    #          driver = "ESRI Shapefile",
+    #          overwrite_layer = TRUE)
+    
+    
+    
+    #### Account for number of elk counted at each location ####
+    elkNums <- elkDat[rep(row.names(elkDat), elkDat$Total), c("UTM_X", "UTM_Y", "Yr")]
+    elkNumSp <- SpatialPointsDataFrame(
+      data.frame("x" = elkNums$UTM_X, "y" = elkNums$UTM_Y),
+      elkNums, proj4string = utm)
+    
+
+################################################################################################## #  
+
+
+### ### ### ### ### ### ### ### ### #
+####  | ESTIMATE DISTRIBUTION |  ####
+### ### ### ### ### ### ### ### ### #    
+
+    
+    ## make 99pct kdes per year
+    elkUD <- kernelUD(elkNumSp[,"Yr"], h = "href", grid = 70) 
+    elkKDE <- getverticeshr(elkUD, percent = 95)   
+    plot(elkKDE)
+    
+    # export
+    writeOGR(elkKDE,
+             dsn = paste0(datDir, "/Elk"),
+             layer = "elkDistn_2008-2019",
+             driver = "ESRI Shapefile",
+             overwrite_layer = TRUE)
+
     
     
     
 ################################################################################################## #  
   
     
-     
-   #### helpful code, maybe #### 
-    
-    
-    # manually generate random locations
-    
-      # could use in combo with point locations maybe, but seems onerous
-      # https://gis.stackexchange.com/questions/277083/how-to-generate-random-points-influenced-by-underlaying-variable-in-r
-      
+ 
 
     
 
