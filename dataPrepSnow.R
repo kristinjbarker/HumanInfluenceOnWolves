@@ -71,6 +71,7 @@
     gc <- data.frame(
       Station = "Granite Creek",
       staAbbv = "gc",
+      elevM = 6770*0.3048,
       Date = ymd(substr(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
       SWE = as.numeric(gsub(".*(,)", "", rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
     )
@@ -78,6 +79,7 @@
     gv <- data.frame(
       Station = "Gros Ventre Summit",
       staAbbv = "gv",
+      elevM = 8750*0.3048,
       Date = ymd(substr(rawGV$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
       SWE = as.numeric(gsub(".*(,)", "", rawGV$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
     )
@@ -85,9 +87,11 @@
     tg <- data.frame(
       Station = "Togwotee Pass",
       staAbbv = "tg",
+      elevM = 9590*0.3048,
       Date = ymd(substr(rawTG$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
       SWE = as.numeric(gsub(".*(,)", "", rawTG$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
     )
     
-    swe <- rbind(gc, gv, tg)
+    swe <- rbind(gc, gv, tg) %>%
+      filter(Date > "2007-01-01")
     write.csv(swe, file = paste0(datDir, "/Environment/swe2019.csv"), row.names = F)
