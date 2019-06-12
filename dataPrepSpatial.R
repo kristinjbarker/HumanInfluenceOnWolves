@@ -75,8 +75,9 @@
  
     
     
-    ## Study area and USFS boundaries (for clipping layers)
+    ## Study area and super-buffered study area (for clipping layers)
     saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+    saPlusLL <- st_read(paste0(datDir, "/Land/studyAreaPlusLL.shp")) 
 
         
     ## Canopy cover     
@@ -110,13 +111,12 @@
 
         
     ## Prey Distribution
-                  
+    elkRaw <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')              
         
+    
     ## Supplemental Feeding Areas
     feedRaw <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
-   
-    
-         
+
 
 ################################################################################################## #  
   
@@ -131,78 +131,85 @@
     ## Study area, in other projections
       
       saAEA <- st_transform(saLL, paste(aea))
+      saPlusAEA <- st_transform(saPlusLL, paste(aea))
       saUTM <- st_transform(saLL, paste(utm))
+      saPlusUTM <- st_transform(saPlusLL, paste(utm))
       
       
+      
+      
+    #### Crop all to study area  ####
     
-    #### Crop all to study area ####
-    
-      canCrop <- crop(canRaw, extent(saAEA)) 
-      elevCrop <- crop(demRaw, extent(saAEA))
-      lcCrop <- crop(lcRaw, extent(saAEA))
-      strucCrop <- st_crop(strucRaw, extent(saLL))
-      motoCrop <- crop(motoRaw, extent(saUTM))
-      recCrop <- crop(recRaw, extent(saUTM))
-      # preyCrop
+      canPrelim <- crop(canRaw, extent(saPlusAEA)) 
+      elevPrelim <- crop(demRaw, extent(saPlusAEA))
+      lcPrelim <- crop(lcRaw, extent(saPlusAEA))
+      strucPrelim <- st_crop(strucRaw, extent(saLL)) ## Error if use saPlus
+      motoUTM <- crop(motoRaw, extent(saPlusUTM))
+      recUTM <- crop(recRaw, extent(saPlusUTM))
+
   
       
-    #### Project all to UTMs (and get aspect and ruggedness from cropped DEM) ####
+          
+    #### Project all to UTMs (and get aspect/ruggedness/slope from dem) ####
     
       
-      canUTM <- projectRaster(canCrop, crs = utm)
-      elevUTM <- projectRaster(elevCrop, crs = utm)
-      aspUTM <- terrain(elevUTM, opt = 'aspect')
-      rugUTM <- terrain(elevUTM, opt = 'tri')
-      slopeUTM <- terrain(elevUTM, opt = 'slope')
-      lcUTM <- projectRaster(lcCrop, crs = utm)
-      strucUTM <- st_transform(strucCrop, paste(utm))
-      motoUTM <- spTransform(motoCrop, utm)
-      recUTM <- spTransform(recCrop, utm)
-      # preyUTM
+      canUTM <- projectRaster(canPrelim, crs = utm)
+      elevUTM <- projectRaster(elevPrelim, crs = utm) 
+      aspUTM <- terrain(elevUTM, opt = 'aspect') 
+      rugUTM <- terrain(elevUTM, opt = 'tri')      
+      slopeUTM <- terrain(elevUTM, opt = 'slope') 
+      lcUTM <- projectRaster(lcPrelim, crs = utm)
+      strucUTM <- st_transform(strucPrelim, paste(utm))
       feedUTM <- spTransform(feedRaw, utm)
       
       
+    #### Crop to actual study area ####
+          
+      canCrop <- crop(canUTM, saUTM)
+      elevCrop <- crop(elevUTM, saUTM) 
+      aspCrop <- crop(aspUTM, saUTM) 
+      rugCrop <- crop(rugUTM, saUTM)      
+      slopeCrop <- crop(slopeUTM, saUTM) 
+      lcCrop <- crop(lcUTM, saUTM)
+      strucPrelim2 <- st_crop(strucUTM, saUTM)
+      strucCrop <- as(strucPrelim2, 'Spatial')
+      recCrop <- recUTM
+      motoCrop <- motoUTM
+      elk <- elkRaw
       
-    #### Match resolutions so can stack ####
       
       
-      
-    #### Measure distance to road etc ####
-     
-     
-        
-################################################################################################## #  
-  
-    
-    
-### ### ### ### ### ### ### ### ### ### #
-####   | VISUALIZING OVERLAYS ETC |  ####
-### ### ### ### ### ### ### ### ### ### #
-        
-
-        
-################################################################################################## #  
-  
-    
-    
-### ### ### ### ### ### ### ### ### 
-####   | COMBINE AND EXPORT  |  ####
-### ### ### ### ### ### ### ### ### 
+    #### Match resolutions and stack rasters ####
 
       
-    #### export cropped elevUTM file to define grid for elk distribution estimation
-    
-      #writeRaster(elevUTM, paste0(datDir, "/Land/DEM/elevCropUTM"), format = "GTiff", overwrite = TRUE)
-    
-    
-    #### stack code for storing ... stacks ####
-        
-        # myRaster <- writeRaster(stk,"myStack.grd", format="raster")
-        
-        # just the dem-based data (elev, asp, rug) for now
-        stk <- stack(elev, asp, rug)
-        names(stk@layers) <- c("elev", "asp", "rug")
-        writeRaster(stk, "../Data/Land/testStack.grd", format = "raster", overwrite = TRUE)
-  
-        
+      # match
+      can <- canCrop
+      elev <- resample(elevCrop, can, "ngb")
+      asp <- resample(aspCrop, can, "ngb")
+      rug <- resample(rugCrop, can, "ngb")
+      slope <- resample(slopeCrop, can, "ngb")
+      lc <- lcCrop
+      recRast <- raster(nrow = nrow(can), ncol = ncol(can))
+      extent(recRast) = extent(can)
+      rec <- rasterize(recCrop, recRast, field = "MapColor")
+     
+      # stack
+      rastStk <- stack(can, elev, asp, rug, slope, lc, rec)
+      names(rastStk) <- c("can", "elev", "asp", "rug", "slope", "lc", "rec")
+      
+      # export
+      writeRaster(rastStk, 
+                  paste0(datDir, "/xProcessedRasters/", names(rastStk)), 
+                  bylayer = TRUE,
+                  format = "GTiff",
+                  overwrite. = TRUE)
+
+
+
+
+# save.image(file = "dataPrepSpatial.RData")
+
+      
+
+
   
