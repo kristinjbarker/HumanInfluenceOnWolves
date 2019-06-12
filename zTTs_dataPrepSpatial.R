@@ -654,6 +654,441 @@
         # step 5, cells and number of points from elk distn data
 
         
+      ## take 3 ##
+        
+        # start with the elk data, make it spatial, and make the extent and resolution match dem
+        # then just sample from those grid cells, maybe
+        
+        elk <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(raw2014$UTM_X), "y" = as.numeric(raw2014$UTM_Y)),
+          raw2014, proj4string = utm)
+        
+        plot(elk)
+        plot(elevCrop); plot(elk, col = "red", add = TRUE)
+
+        elk2 <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(raw2015$UTM_E), "y" = as.numeric(raw2015$UTM_N)),
+          raw2015, proj4string = utm)     
+        plot(elk2, col = "blue", add = T)
+        
+        
+        elk3 <- SpatialPointsDataFrame(
+          data.frame("x" = as.numeric(raw2019$UTM_X), "y" = as.numeric(raw2019$UTM_Y)),
+          raw2019, proj4string = utm)     
+        plot(elk3, col = "black", add = T)  
+        
+        
+        # what's the resolution of the points? (do points even have resolutions?)
+        str(elk)
+        
+        # this should be interesting
+        test <- rasterFromXYZ(raw2014[,c("UTM_X", "UTM_Y", "Total")], 
+                              res = res(elevCrop),
+                              crs = utm)
+        # error, x cell sizes are not regular
+        # tried this with and without defining res
+        # following help guidance leads me to attempt...
+        
+        test <- rasterize(x = raw2014$UTM_X, y = raw2014$UTM_Y, 
+                          field = raw2014$Total)
+        # this doesn't work because x is supposed to be an XY 
+        # and y is supposed to be a raster
+        
+        # working thru the help examples, i still think i can do this somehow
+        # but i have to set up an underlying raster first i guess
+        r <- raster(ncols=36, nrows=18) # rasterlayer -like elevCrop
+        n <- 1000
+        set.seed(123)
+        x <- runif(n) * 360 - 180
+        y <- runif(n) * 180 - 90
+        xy <- cbind(x, y)
+        plot(r) # cant plot bc no values, fair enough
+        r0 <- rasterize(xy, r)
+        plot(r0) # ohhhh  ok it's pulling its values from numbers in x and y
+        36*18
+        # there are 648 cells so i don't really understand 
+        # how it picks the numbers
+        # y range of raster looks like -100ish - 100ish
+        # x range looks like -175ish - 175ish
+        summary(x) #mmk this aligns with x axis values
+        summary(y) # right ok
+        # so there are 1000 random combinations of xy values
+        # and the raster is plotting those combos i think
+        # but i'm not sure bc it doesn't make sense that some values would be
+        # so close to 1000
+        
+        # how many points?
+        r2 <- rasterize(xy, r, fun=function(x,...)length(x))
+        plot(r2) # ohhhh THIS is the count
+        
+        # so if i create a blank raster
+          # still need to figure out resolution but will deal with that later
+        # then create a df of elk counts with the coords duplicated to correspond to the 
+        
+        # --ohhh yknow what, this is dumb
+        # i don't want a raster
+        # but i can just duplicate the points however many times
+        # make that a spdf
+        # and feed it to kernelud or whatever
+        
+        
+        
+      ## TAKE 4 ##
+        
+        test <- raw2014 %>%
+          dplyr::select(UTM_X, UTM_Y, Total)
+        testExp <- test[rep(row.names(test), test$Total), c("UTM_X", "UTM_Y")]
+        # oh holy shit thank god someone already did that
+        
+        tSpdf <- SpatialPointsDataFrame(
+          data.frame("x" = testExp$UTM_X, "y" = testExp$UTM_Y),
+          testExp, proj4string = utm)
+        plot(elevCrop)
+        plot(tSpdf, add = T)
+        plot(tSpdf)
+        # can't see the duplicate points so will need to check UD 
+        # eg to make sure it's  real fuckin hot on the refuge 
       
+        tUDs <- kernelUD(tSpdf, h = "href")
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        plot(tHRs)      
+        
+        tMCP <- mcp(tSpdf, percent = 100)
+        
+        plot(elevCrop); plot(tMCP, add = T); plot(tHRs, add = T, col = "blue") 
+        plot(tUDs, add = T)
+        
+        # export UD to check heatiness in arc
+        tRasty <- raster(tUDs)
+        writeRaster(tRasty, paste("zTestTiff"), format="GTiff", overwrite=TRUE)   
+        
+        # hm i don't like missing out on the uhl hill counts
+        # make sure they're really missing
+        # if so, try UD with just the locations of counts but not number of animals considered
+        
+        
+         writeOGR(tHRs, 
+               dsn = paste0(datDir, "/Elk"), 
+               layer = "zTestUD", 
+               driver = "ESRI Shapefile", 
+               overwrite_layer = TRUE)
+
+         # yeah not only are those missing
+         # but the UD blows the elk distn out across town which is a little silly
+         
+         
+        # trying without the duplicated points per number of elk
+        tSpdf2 <- SpatialPointsDataFrame(
+          data.frame("x" = test$UTM_X, "y" = test$UTM_Y),
+          test, proj4string = utm)         
       
+        tUDs2 <- kernelUD(tSpdf2, h = "href")
+        tHRs2 <- getverticeshr(tUDs2, percent = 99)
+        plot(elevCrop); plot(tHRs, add = T); plot(tSpdf2, add = T)
+        plot(tHRs2, add = T, col = "blue")
+        # oh my that's much much worse. should've seen that coming
+        
+        tHRs3 <- getverticeshr(tUDs, percent = 90)
+        plot(elevCrop); plot(tHRs3, add = T); plot(tSpdf2, add = T)
+        # newp
+               
+        tHRs4 <- getverticeshr(tUDs, percent = 95)
+        plot(elevCrop); plot(tHRs4, add = T); plot(tSpdf2, add = T)
+        # newp    
+        
+        
+        ## alright so it's either something to do with the 99% KDE
+        ## or a binary 0/1 per cell depending whether elk were counted there
+        
+        
+        # checking out the binary option
+        
+        
+        # step1: create blank raster (i think)
+        
+        tR <- raster(nrows = nrows(elevCrop), ncols = ncols(elevCrop),
+                     crs = crs(elevCrop), ext = extent(elevCrop),
+                     resolution = res(elevCrop), vals = 0)
+        
+        # step 2: change values to 1 if elk were counted in the cell
+        
+        tR2 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR)
+        plot(tR2)
+        # nothing there
+        
+        tR2 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR, fun = function(x,...)length(x))
+        plot(tR2)   
+        # samesies
+        
+        tR2 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR, field = 1)
+        plot(tR2)   
+        # eff
+        
+        test$val = 1
+        tR2 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR, test$val)
+        plot(tR2)        
+        # summary looks right but still see nothing on plot
+        
+        tR2 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR, test$val, fun = mean)
+        plot(tR2)        
+        
+        
+        summary(tR2)
+        length(tR2)-36509674
+        # yeah 118 1's, that's how many observation points there were
+        # oh maybe start as null instead of 0
+        # if that doesn't work, check it in arc
+        
+        tR3 <- raster(nrows = nrows(elevCrop), ncols = ncols(elevCrop),
+                     crs = crs(elevCrop), ext = extent(elevCrop),
+                     resolution = res(elevCrop), vals = NULL)   
+        tr4 <- rasterize(cbind(test$UTM_X, test$UTM_Y), tR, test$val) 
+        plot(tr4)
+        
+        # yeah ok maybe the res is just too fine-scale to see the 1s
+        
+        writeRaster(tr4, paste0(datDir, "/Elk/test2.tiff"), "GTiff")
+        
+        # this isn't working, just double-checked in arc
+        
+        
+        
+        
+        
+        
+      ## TAKE 5ISH, 7 JUN ##
+        
+        # goal: make and assess utility of 0/1 binary grid val for elk presence
+        
+        # elk count data (just 1 yr)
+        test <- raw2014 %>%
+          dplyr::select(UTM_X, UTM_Y, Total)
+        
+        
+        # elk count data made spatial
+        tSpdf <- SpatialPointsDataFrame(
+          data.frame("x" = test$UTM_X, "y" = test$UTM_Y),
+          test, proj4string = utm)
+        
+        
+        # blank raster to match up with count data
+        tR <- raster(nrows = nrows(elevCrop), ncols = ncols(elevCrop),
+                     crs = crs(elevCrop), ext = extent(elevCrop),
+                     resolution = res(elevCrop), vals = 0)   
+        
+        # cell index for each elk count point in raster
+        iCell <- cellFromXY(tR, tSpdf)
+        
+        # make raster cells with that index have value of 1
+        tR[iCell] <- 1
+        
+        tR
+        length(which(tR[] == 1))
+        plot(tR)
+        # this does work it's just too fine-scale to see i think
+        # check in arc again
+        
+        writeRaster(tR, paste0(datDir, "/Elk/test3.tiff"), "GTiff")
+        # yeah super fucking fine-scale, need to fix underlying grid
+        
+        
       
+        
+        # blank raster to match up with count data - inc resolution x10
+        tR2 <- raster(crs = crs(elevCrop), ext = extent(elevCrop),
+                     resolution = res(elevCrop)*100, vals = 0)   
+        
+        
+        # cell index for each elk count point in raster
+        iCell2 <- cellFromXY(tR2, tSpdf)
+        
+        # make raster cells with that index have value of 1
+        tR2[iCell2] <- 1
+        
+        tR2
+        length(which(tR2[] == 1))
+        plot(tR2)
+        writeRaster(tR2, paste0(datDir, "/Elk/test.tiff"), "GTiff")
+        
+        ## mmk 0/1 binary sucks no matter how i slice it
+        ## BUT just discovered the option in kernelUD to use boundary, trying that 
+        ## (amazing what you can do when you bother to read the fucking help file kristin)
+        
+        
+        
+        tUDs <- kernelUD(tSpdf, h = "href", boundary = fence)
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        plot(tHRs)     
+        # removed jagged fenceline near townt o fix first error
+        # but now cant stop getting 
+        # Error in 3 * h : non-numeric argument to binary operator
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 0.2)
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        # newp can't do 99
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 0.5)
+        tHRs <- getverticeshr(tUDs, percent = 95)
+        # newp can't do 99      or 95
+        
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 1)
+        tHRs <- getverticeshr(tUDs, percent = 95)
+        # newp can't do 99 or 95 with h=1 or h=5
+        
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 5)
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        # newp can't do 99   or 95
+        
+        
+        tUDs <- kernelUD(tSpdf, h = "href")
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        # h is 6116 so maybe i'll manually input that and see if r reads it as numeric now
+        
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 6116, boundary = fence)
+        # now the error is that the boundary segments are too small
+        # which makes sense bc h is freakin huge
+        
+        
+        
+        tUDs <- kernelUD(tSpdf, h = 3000)
+        tHRs <- getverticeshr(tUDs, percent = 99)
+        # k...
+        tUDs <- kernelUD(tSpdf, h = 3000, boundary = fence)
+        # n
+        tUDs <- kernelUD(tSpdf, h = 3, boundary = fence) # even 30 was too big
+        plot(tUDs)
+        
+        # ok i just need to clip the resultant shps, this is ridiculous
+        
+        
+        
+        
+        
+        ## quick export of elk count data to verify utm locations
+      writeOGR(elk, 
+               dsn = paste0(datDir, "/Elk"), 
+               layer = "test", 
+               driver = "ESRI Shapefile", 
+               overwrite_layer = TRUE)
+        
+        
+        
+        # here's some bad olde code from the dataprepelkdistn.R
+        
+            
+    ## underlying grid to sample from
+    grd <- as(elevCrop, 'SpatialGrid')
+    lns <- gridlines(grd)
+    plot(grd)
+    plot(lns, col = "white", add = T)
+    # hm. looks like your grid cells are way bigger than you thought
+
+        
+    ## use DEM to define grid size and extent
+    elevCrop <- raster(paste0(datDir, "/Land/DEM/elevCropUTM.tif"))
+    
+    
+    
+    
+    
+    
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+        
+        
+    
+  #### DISTANCE TO LINES AND POLYGONS ####  
+    
+    
+    
+    ## read in used & available wolf locs (test file from b4 finalized wolfYrs)
+    locs <- read.csv("wolfLocs-UsedAvail.csv")
+    
+
+    # spatialize
+    locSp <- SpatialPointsDataFrame(
+      data.frame("x" = locs$X, "y" = locs$Y),
+      locs, proj4string = utm)
+    
+    
+        ## moto = lines. struc = polygons
+    # 
+    # #step 1. dist to lines (motorized roads)
+    # 
+    # distPrelim <- gDistance(locSp, motoUTM, byid = TRUE)
+    # distRd <- apply(distPrelim, 2, function(X) rownames(distPrelim)[order(X)[1]])
+    # 
+    
+    # ugh, this is unwieldy. fiiine i'll try yet another package
+    library(geosphere)
+    # test <- dist2Line(locSp, motoUTM)
+    # nope, gotta be latlong (weird, you'd think flat would be better)
+    locLL <- spTransform(locSp, ll)
+    motoLL <- spTransform(moto, ll)
+    test <- dist2Line(locLL, motoLL) # sloooooooooow
+    # never mind that takes hours, not cool
+    
+    # just need smaller test data to figure out how to do the gDistance one
+    tDat <- droplevels(sample_n(locs, 20))
+    
+    
+    # add row number (for joining later)
+    tDat$rowNum = row.names(tDat)
+    
+    # make spatial
+    tDatSp <- SpatialPointsDataFrame(
+      data.frame("x" = tDat$X, "y" = tDat$Y),
+      tDat, proj4string = utm)
+    
+
+    # calculate shortest distance from each point to a road
+    distRaw <- gDistance(tDatSp, motoUTM, byid = TRUE)
+    
+
+    # make distance longform
+    distPrelim <- data.frame(
+      rowNum = colnames(distRaw),
+      distRd = distRaw[1,])
+    
+    # join distance values back to main dataframe
+    distRd <- tDat %>%
+      left_join(distPrelim, by = "rowNum")
+
+    # noice
+    
+    
+    # now try feedgrouds
+    
+    d2 <- gDistance(tDatSp, feedUTM, byid = TRUE)
+    # make distance longform
+    distPrelim2 <- data.frame(
+      rowNum = colnames(d2),
+      distFeed = d2[1,])    
+    
+     # join distance values back to main dataframe
+    distRd <- tDat %>%
+      left_join(distPrelim, by = "rowNum") %>%
+      left_join(distPrelim2, by = "rowNum")
+
+    # mmk structures migth get weird, may need to make spolydf
+    d3 <- gDistance(tDatSp, strucUTM, byid = TRUE)
+    # yup that didn't work
+    
+    strucUTM2 <- as(strucUTM, 'Spatial')
+    # d this earlier in spatial code!
+    
+    d3 <- gDistance(tDatSp, strucUTM2, byid = TRUE)
+    
+    # ah shit i forgot i was pulling extra distances from the feedgrounds and structures 
+    # need to be the closest ones
+    
+    d2.2 <- apply(d2, 2, min)
+    # ysss apply ftw
+    
