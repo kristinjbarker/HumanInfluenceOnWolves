@@ -85,6 +85,9 @@
       # just using one for now to practice
       spat <- stack("../Data/Land/testStack.grd")
     
+      # snow
+      snowRaw <- read.csv(paste0(datDir, "/Environment/swe2019.csv"))
+    
     
     #### Human Data ####
     
@@ -105,19 +108,17 @@
     
     #### Make wolf data spatial ####
     
-    locsSpat <- SpatialPointsDataFrame(
+    locsUTM <- SpatialPointsDataFrame(
       data.frame("x" = locs$X, "y" = locs$Y), 
       locs, proj4string = utm)
     locsSpatAEA <- spTransform(locsSpat, crs(spat)) 
-    
-    
-    #### Use extent of wolf data to define extent of spatial data ####
+
     
     
     
     #### Extract spatial data at each wolf or kill location ####
     
-    extSpat <- extract(spat, locsSpatAEA, buffer = NULL) # consider buffering points
+    extSpat <- extract(spatStack, locsSpatAEA, buffer = NULL) # consider buffering points
     
     
     
@@ -153,13 +154,124 @@
 ################################################################################################## #  
   
     
+### ### ### ### ### ### ### ### ### ### 
+####      | MEASURE DISTANCES |    ####
+# to roads, feedgrounds, & structures #
+### ### ### ### ### ### ### ### ### ### 
+
+        
+      ## Motorized roads ##
     
-### ### ### ### ### ### ### ### ### ### ### ##
-####   | COMBINE WOLF AND SPATIAL DATA |  ####
-### ### ### ### ### ### ### ### ### ### ### ##
- 
+        
+        # calculate shortest distance from each point to a road
+        distRdRaw <- gDistance(locsUTM, motoUTM, byid = TRUE)
+        
+    
+        # make distance longform
+        distRd <- data.frame(
+          rowNum = colnames(distRdRaw),
+          distRd = distRdRaw[1,])
+        
+        
+      ## Feedgrounds ##      
+        
+        # calc distance to all feedgrounds
+        distFeedRaw <- gDistance(locsUTM, feedUTM, byid = TRUE)
+        
+        # identify the closest feedground (shortest distance)
+        distFeedMin <- apply(distFeedRaw, 2, min)
+        
+        # make it longform
+        distFeed <- data.frame(
+          rowNum = colnames(distFeedMin),
+          distRd = distFeedMin[1,])
+        
+        
+        
+      ## Feedgrounds ##      
+        
+        # calc distance to all feedgrounds
+        distFeedRaw <- gDistance(locsUTM, feedUTM, byid = TRUE)
+        
+        # identify the closest feedground (shortest distance)
+        distFeedMin <- apply(distFeedRaw, 2, min)
+        
+        # make it longform
+        distFeed <- data.frame(
+          rowNum = colnames(distFeedMin),
+          distFeed = distFeedMin[1,])        
+        
+        
+      ## Structures ##      
+        
+        # calc distance to all structures
+        distStrucRaw <- gDistance(locsUTM, as(strucUTM, 'Spatial'), byid = TRUE)
+        
+        # identify the shortest distance
+        distStrucMin <- apply(distStrucRaw, 2, min)
+        
+        # make it longform
+        distStruc <- data.frame(
+          rowNum = colnames(distStrucMin),
+          distStruc = distStrucMin[1,])        
+        
+        
+                
+        
+      ## All distances ##
+        
+        
+        # join all distance values back to main dataframe
+        distDat <- locsUTM@data %>%
+          left_join(distRd, by = "rowNum") %>%
+          left_join(distFeed, by = "rowNum") %>%
+          left_join(distStruc, by = "rowNum")
 
     
+
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### # 
+####  | ADD SNOW  |  ####
+### ### ### ### ### ### #
+        
+        
+    ## based on elevation of point, closest elevation of SWE station, and date
+
+    ## identify snotel stations and their elevations
+    stations <- snowRaw %>%
+      dplyr::select(staAbbv, elevM) %>%
+      distinct()
+     
+    ## format snow data (date as such)   
+    snow <- snowRaw %>%
+      mutate(Date = ymd(Date))
+  
+    
+    ## placeholder
+    modDat <- whateverYouCallThatDf %>%
+      mutate(SWE = NA)
+    
+    
+    ## for each used & available wolf location    
+    for(i in 1:nrow(modDat)) {
+      
+      # identify its date and elevation
+      iDate <- modDat[i, "Date"]
+      iElev <- modDat[i, "Elev"]
+      
+      # find the snotel site closest in elevation
+      iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
+      
+      # find value for that site and date
+      iSWE <- snow[which(snow$staAbbv == sta & snow$Date == iDate), "SWE"]
+      
+      # add the value to the dataframe
+      modDat[i, "SWE"] <- iSWE
+      
+    }
+
     ####     
         
      
