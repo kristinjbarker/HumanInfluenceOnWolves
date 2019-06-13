@@ -92,31 +92,22 @@
     lcRaw <- raster(paste0(datDir, "//Land//LandcoverType//NLCD//", "nlcd_2011_landcover_2011_edition_2014_10_10.img"))
     lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv")) 
         
-    
-    ## Buildings and Structures
-    strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
-
- 
-    ## Motorized Roads
-    motoRaw <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoads')
-
-        
+       
     ## Recreational use restrictions
     recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
     recLegend <- recRaw@data %>%
       dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
       distinct() %>%
       rename(recCol = MapColor, recMoto = Wheeled_Ve, recSled = Over_Snow_, recNonmoto = Non_Motori)
-
-
         
-    ## Prey Distribution
-    elkRaw <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')              
-        
+
     
-    ## Supplemental Feeding Areas
-    feedRaw <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
+    ## Buildings and Structures
+    strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
 
+
+
+ 
 
 ################################################################################################## #  
   
@@ -134,6 +125,7 @@
       saPlusAEA <- st_transform(saPlusLL, paste(aea))
       saUTM <- st_transform(saLL, paste(utm))
       saPlusUTM <- st_transform(saPlusLL, paste(utm))
+
       
       
       
@@ -144,7 +136,6 @@
       elevPrelim <- crop(demRaw, extent(saPlusAEA))
       lcPrelim <- crop(lcRaw, extent(saPlusAEA))
       strucPrelim <- st_crop(strucRaw, extent(saLL)) ## Error if use saPlus
-      motoUTM <- crop(motoRaw, extent(saPlusUTM))
       recUTM <- crop(recRaw, extent(saPlusUTM))
 
   
@@ -160,7 +151,7 @@
       slopeUTM <- terrain(elevUTM, opt = 'slope') 
       lcUTM <- projectRaster(lcPrelim, crs = utm)
       strucUTM <- st_transform(strucPrelim, paste(utm))
-      feedUTM <- spTransform(feedRaw, utm)
+
       
       
     #### Crop to actual study area ####
@@ -172,10 +163,10 @@
       slopeCrop <- crop(slopeUTM, saUTM) 
       lcCrop <- crop(lcUTM, saUTM)
       strucPrelim2 <- st_crop(strucUTM, saUTM)
-      strucCrop <- as(strucPrelim2, 'Spatial')
+ #     strucCrop <- as(strucUTM, 'Spatial')
       recCrop <- recUTM
       motoCrop <- motoUTM
-      elk <- elkRaw
+
       
       
       
@@ -202,14 +193,16 @@
                   paste0(datDir, "/xProcessedRasters/", names(rastStk)), 
                   bylayer = TRUE,
                   format = "GTiff",
-                  overwrite. = TRUE)
+                  overwrite = TRUE)
 
 
+    #### Export structure shapefile ####
 
-
+      st_write(strucUTM, paste0(datDir, "/Human/Structures/strucsUTM.shp"))
+      
+      
 # save.image(file = "dataPrepSpatial.RData")
 
-      
 
 
   
