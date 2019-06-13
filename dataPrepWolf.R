@@ -144,12 +144,13 @@
           gpsFmt <- locsRaw %>%
             # remove extraneous columns
             dplyr::select(-c(Number, X.1)) %>%
-            # define winter; add wolf-year; fix trailing whitespace in LGV
+            # define winter (jan-mar); add wolf-year; fix trailing whitespace in LGV; format date
             mutate(winter = ifelse(Month <= 3, 1, 0),
                    Pack = trimws(Pack),
-                   wolfYr = paste0(Wolf, Year)) %>%
+                   wolfYr = paste0(Wolf, Year),
+                   Date = mdy(Date)) %>%
             # only use winter locations for analysis
-            filter(winter == 1)
+            filter(winter == 1) 
           gpsFmt <- droplevels(gpsFmt)
 
           # make it spatial
@@ -190,8 +191,8 @@
           # read back in file telling which wolves included
           wolfYrsAll <- read.csv("wolfYrs_potential_upd.csv")
           wolfYrs <- filter(wolfYrsAll, incl == "y") # 34 wolf-yrs
-          length(unique(wolfYrs$wolf)) # 14 wolves
-          length(unique(wolfYrs$packCap)) # 6 packs
+          length(unique(wolfYrs$wolf)) # 14 wolves - now 27 13ishjune
+          length(unique(wolfYrs$packCap)) # 6 packs - now 8
           wolfYrsList <- as.character(unique(wolfYrs$wolfYr))
           
           
@@ -221,8 +222,8 @@
           
           
           ## create blank df to store results in
-          locsUA <- data.frame(matrix(NA, nrow = 0, ncol = 4))
-          colnames(locsUA) <- c("X", "Y", "Used", "wolfYr")
+          locsUA <- data.frame(matrix(NA, nrow = 0, ncol = 6))
+          colnames(locsUA) <- c("X", "Y", "Used", "wolfYr", "Date", "Time")
           
 
           for (i in 1:length(wolfYrsList)) {
@@ -230,9 +231,13 @@
             # identify individual
             w <- wolfYrsList[i]
             
-            # identify its locations
+            # identify its locations 
             wLocs <- filter(locs, wolfYr == w)
             wLocs$Used <- 1
+            
+            # identify dates and times (for random selection)
+            wDates <- unique(wLocs$Date)
+            wTimes <- unique(wLocs$Time)
 
             # calculate number of random locations to generate (5:1 used:avail)
             nLocs <- NROW(wLocs)
@@ -250,8 +255,12 @@
             rndmDat$Used <- 0
             rndmDat$wolfYr <- w
             
+            # randomly assign dates and times from those in recorded locations
+            rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
+            rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
+            
             # combine random and recorded locations
-            wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr"))
+            wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Date", "Time"))
             wDat <- rbind(wLocsOnly, rndmDat)
             
             # add to master dataframe
