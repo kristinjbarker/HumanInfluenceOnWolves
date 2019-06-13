@@ -28,12 +28,12 @@
     
     # list of packages needed
     packages <- c(
-      "raster",        ## for parts of justin clapp's code
-      "maps",          ## for parts of justin clapp's code
-      "maptools",      ## for cluster algorithm & kmlPoints
-      "rgdal",         ## for cluster algorithm & spatial/shapefile work 
+      "raster",        ## raster stacking, extraction, etc
+      "maptools",      ## kmlPoints
+      "rgdal",         ## spatial/shapefile work 
+      "rgeos",         ## gDistance and other spatial work
       "sp",            ## spatial work
-      "sf",            ## for spatial work like the kids are doing it these days
+      "sf",            ## spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
       "dplyr")         ## data manipulation and general awesomeness
     
@@ -72,7 +72,32 @@
     
     #### Wolf Locations: Used & Available #### 
     
-    locs <- read.csv("wolfLocs-UsedAvail.csv")
+    locs <- read.csv("wolfLocs-UsedAvail.csv") 
+    locs <- locs %>%
+      mutate(wolfYr = as.character(wolfYr),
+             Date = ymd(Date),
+             Year = substr(wolfYr, nchar(wolfYr) - 3, nchar(wolfYr)))
+
+    
+    
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+    
+    
+  ####  ~~ TEMPORARY CODE ~~ just use a few wolf locs to make sure code works. delete this ####
+      
+    
+    # want at least one location per year and would be good to have range of elevs etc
+    set.seed(420)
+    locs <- sample_n(locs, size = 100, replace = FALSE) 
+    locs <- cbind(rowNum = rownames(locs), locs)
+    unique(sort(as.numeric(locs$Year)))
+    write.csv(locs, "testLocs_subset.csv", row.names = FALSE) # to double-check things in arc
+    
+    
+    
+    
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+    
     
     
     #### Kill Sites: Used & Available ####   
@@ -80,22 +105,38 @@
     kills <- read.csv("killSites.csv")
         
         
-    #### Environmental Data #### 
+     #### Environmental Data #### 
     
-      # just using one for now to practice
-      spat <- stack("../Data/Land/testStack.grd")
+      # read in rasters to extract point data from
+      files.rast <- list.files(
+        path = paste0(datDir, "/xProcessedRasters/"),
+        pattern = ".tif$",
+        full.names = TRUE)
+      rast <- stack(files.rast)
+      names(rast)
     
       # snow
       snowRaw <- read.csv(paste0(datDir, "/Environment/swe2019.csv"))
     
+      
     
-    #### Human Data ####
-    
-    
-    
-    
-    
-    
+    #### Human and prey data ####
+      
+      # roads
+      motoUTM <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoads')
+
+      
+      # feedgrounds
+      feedLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
+      feedUTM <- spTransform(feedLL, utm)
+      
+      # structures
+      strucUTM <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsUTM')
+      
+      # prey availability
+      preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
+ 
+   
     
 ################################################################################################## #  
   
@@ -111,14 +152,11 @@
     locsUTM <- SpatialPointsDataFrame(
       data.frame("x" = locs$X, "y" = locs$Y), 
       locs, proj4string = utm)
-    locsSpatAEA <- spTransform(locsSpat, crs(spat)) 
 
-    
-    
     
     #### Extract spatial data at each wolf or kill location ####
     
-    extSpat <- extract(spatStack, locsSpatAEA, buffer = NULL) # consider buffering points
+    extRast <- extract(rast, locsUTM, buffer = NULL) # consider buffering points
     
     
     
@@ -145,7 +183,7 @@
     
     #### combine with location data ####
     
-    ext <- cbind(extSpat, locs)
+    ext <- cbind(extRast, locs)
     
 
  
@@ -156,7 +194,6 @@
     
 ### ### ### ### ### ### ### ### ### ### 
 ####      | MEASURE DISTANCES |    ####
-# to roads, feedgrounds, & structures #
 ### ### ### ### ### ### ### ### ### ### 
 
         
@@ -183,37 +220,56 @@
         
         # make it longform
         distFeed <- data.frame(
-          rowNum = colnames(distFeedMin),
-          distRd = distFeedMin[1,])
+          rowNum = names(distFeedMin),
+          distFeed = distFeedMin)
         
         
         
-      ## Feedgrounds ##      
-        
-        # calc distance to all feedgrounds
-        distFeedRaw <- gDistance(locsUTM, feedUTM, byid = TRUE)
-        
-        # identify the closest feedground (shortest distance)
-        distFeedMin <- apply(distFeedRaw, 2, min)
-        
-        # make it longform
-        distFeed <- data.frame(
-          rowNum = colnames(distFeedMin),
-          distFeed = distFeedMin[1,])        
-        
-        
+
       ## Structures ##      
         
         # calc distance to all structures
-        distStrucRaw <- gDistance(locsUTM, as(strucUTM, 'Spatial'), byid = TRUE)
+        distStrucRaw <- gDistance(locsUTM, strucUTM, byid = TRUE)
         
         # identify the shortest distance
         distStrucMin <- apply(distStrucRaw, 2, min)
         
         # make it longform
         distStruc <- data.frame(
-          rowNum = colnames(distStrucMin),
-          distStruc = distStrucMin[1,])        
+          rowNum = names(distStrucMin),
+          distStruc = distStrucMin)  
+        
+        
+        
+      ## Prey availability ##
+        
+        # create blank df to store results
+        distPrey <- data.frame(rowNum = NA, distPrey = NA)
+        distPrey <- distPrey[-1,]
+   
+        
+        # use prey availability specific to the year when the location was recorded
+        yrs <- unique(locs$Year)
+        
+        for (i in 1:length(yrs)) {
+          
+          # pull polygon of elk distribution during that year
+          iYr <- yrs[i]
+          iElk <- preyUTM[preyUTM$id == iYr, ]
+          iLocs <- locsUTM[locsUTM$Year == iYr, ]
+
+          # calculate distance to elk polygon
+          distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
+          
+          # make it longform
+          distElk <- data.frame(
+            rowNum = colnames(distElkRaw),
+            distPrey = distElkRaw[1,])
+        
+          # join to master
+          distPrey <- rbind(distPrey, distElk) 
+          
+        }
         
         
                 
@@ -225,7 +281,8 @@
         distDat <- locsUTM@data %>%
           left_join(distRd, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
-          left_join(distStruc, by = "rowNum")
+          left_join(distStruc, by = "rowNum") %>%
+          left_join(distPrey, by = "rowNum")
 
     
 
@@ -250,22 +307,42 @@
   
     
     ## placeholder
-    modDat <- whateverYouCallThatDf %>%
+    modDat <- ext %>%
       mutate(SWE = NA)
     
     
-    ## for each used & available wolf location    
-    for(i in 1:nrow(modDat)) {
+    
+    
+    #### KRISTIN YOU LEFT OFF HERE ####
+    
+    
+      ## loop works (yay) 
+      ## but errors out because some locs have NA eev ##
+    
+    
+
+      ## so next step is to check this in arcmap and figure out the NA extraction issue ##    
+    z <- distDat %>%
+      dplyr::select(rowNum, distRd, distFeed, distStruc, distPrey) %>%
+      left_join(ext, by = "rowNum")
+    write.csv(z, file = "testDat.csv", row.names = FALSE)
+    
+    
+    
+    
+    ## for each used & available wolf location   
+    for(i in 1:34) {
+   # for(i in 1:nrow(modDat)) {
       
       # identify its date and elevation
       iDate <- modDat[i, "Date"]
-      iElev <- modDat[i, "Elev"]
+      iElev <- modDat[i, "elev"]
       
       # find the snotel site closest in elevation
       iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
       
       # find value for that site and date
-      iSWE <- snow[which(snow$staAbbv == sta & snow$Date == iDate), "SWE"]
+      iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "SWE"]
       
       # add the value to the dataframe
       modDat[i, "SWE"] <- iSWE
