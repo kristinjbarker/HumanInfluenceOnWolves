@@ -75,22 +75,224 @@
     #### Wolf, Pack, and Collar Information #### 
     
     
-        ## collar data from GTNP ## 
+        ## historic collar data (from GTNP; cleaned by jen)  
+        locsHistoric <- read.csv(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\wolfHistoricCleaned.csv"))
     
-          # gps and vhf collar data
-          locsRaw <- read.csv(paste0(datDir, "\\Wolf\\wolfHistoricCleaned.csv"))
+        ## recent collar data files and filepaths 
+        rawNames <- list.files(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\Post2016FromCollaborators"))
+        rawPaths <- list.files(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\Post2016FromCollaborators"), full.names = TRUE) 
+        
+        ## recent collar data from winter 2019 (cleaned by me, but not formatted to match historic)
+        rawMe <- read.csv("../PredationStudy/Clusters/collarLocsProcessed/locDat-20190409.csv")
+        
+        ## capture and fate info (includes historic and recent)
+        refRaw <- read.csv(paste0(datDir, "\\Wolf\\CaptureAndCollarInfo\\collarsCapturesFates.csv"))
+          
+          
+        ## Study area in each projection
+        saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+        saAEA <- st_transform(saLL, paste(aea))
+        saUTM <- st_transform(saLL, paste(utm))  
+          
+          
+ 
+################################################################################################## #  
+  
     
-          # capture and collar info
-          wolfRaw <- read.csv(paste0(datDir, "\\Wolf\\CaptureAndCollarInfo\\wolf_metadata.csv"))
+    
+### ### ### ### ### ### ### ##
+####   | PREP RAW DATA |  ####
+### ### ### ### ### ### ### ##
+        
+        
+        
+      #### prepare to loop through collar data files ####
+        
+        
+        ## format dates in capture and fate data
+        ref <- refRaw %>%
+          mutate(startData = mdy(startData), endDataPrelim = mdy(endDataPrelim))
+
+        
+        ## identify all individuals
+        wolves <- ref$wolfID
+        
+        ## link individuals to collar file locations for processing
+        wolvesThem <- data.frame(wolfID = regmatches(rawNames, regexpr("[0-9]+[A-Z]", rawNames))) %>% distinct()
+        wolvesMe <- data.frame(fileLoc = "rawMe", wolfID = as.character(unique(rawMe$wolfID)))
+
+        
+        ## create blank dataframes to store processed data in
+        iOut <- as.data.frame(NULL)
+        allOut <- as.data.frame(NULL)
+        
+        
+        
+      #### for each wolf whose data you didn't already start cleaning... ####
+        
+        for(i in 1:nrow(wolvesThem)) {
+          
+          # identify the wolf 
+          iWolf <- as.character(wolvesThem[i, "wolfID"])
+          iPack <- as.character(ref[ref$wolfID == iWolf, "pack"])
+          
+          # identify data start and end dates (one day after collar deployment or before transmission end)
+          iStart <- ref[ref$wolfID == iWolf, "startData"]
+          iEnd <- ref[ref$wolfID == iWolf, "endData"]
+          
+          # find its collar files (some have >1)
+          iFiles <- rawPaths[grep(pattern = iWolf, x = rawPaths)]
+          
+          # for each file...
+          for(j in 1:length(iFiles)) {
+            
+            # read in collar data (and deal with telonics' awkward headers)
+            iDat <- read.csv(iFiles[j], header = FALSE, stringsAsFactors = FALSE, col.names = 1:25)  
+            
+            # remove awkward headers and trailing NA column
+            colnames(iDat) <- unlist(iDat[which(iDat[ ,1] == "Acquisition Time"), ])
+            iDat <- iDat[-c(1:which(iDat[ ,1] == "Acquisition Time")), ]
+            iDat <- iDat[!is.na(names(iDat))]
+            
+            # remove unsuccessful locations
+            iDat <- iDat[grepl(pattern = "Succe.", x = iDat$'GPS Fix Attempt'), ]
+            
+            # if no successful locations recorded, move on
+            if(nrow(iDat) == 0) { next }
+            
+            # start renaming columns to match historic data format
+            iDat <- iDat %>%
+              rename(datetime = 'Acquisition Time',
+                     Latitude = 'GPS Latitude',
+                     Longitude = 'GPS Longitude') %>%
+              mutate(Number = NA,
+                     Wolf = iWolf,
+                     Pack = iPack,
+                     datetime = ymd_hms(datetime),
+                     X = NA,
+                     Y = NA,
+                     Latitude = as.numeric(Latitude),
+                     Longitude = as.numeric(Longitude)) 
+            
+            
+            # record dates and times in local time
+            attributes(iDat$datetime)$tzone <- "MST"
+            iDat <- iDat %>%
+              mutate(Date = substr(datetime, 1, 11),
+                     Time = substr(datetime, 12, 19),
+                     Month = month(datetime),
+                     Day = day(datetime),
+                     Year = year(datetime))
+            iDat$Date <- as.Date(iDat$Date)
+            
+            # remove pre-deployment and non-winter locations (jan-mar to align with cluster data))
+            iDat <- filter(iDat, Date >= iStart & Date < iEnd)
+            
+            # only use winter locations (defined 
+            iDat <- filter(iDat, Month <= 3)
+
+            
+            # if no remaining locations, move on
+            if(nrow(iDat) == 0) { next }
+                        
+            
+            # order and format columns
+            iDat <- iDat %>%
+              dplyr::select(c("Number", "Wolf", "Pack", "datetime",
+                              "Date", "Time", "Month", "Day", "Year",
+                              "X", "Y", "Latitude", "Longitude")) %>%
+              mutate(Latitude = as.numeric(Latitude),
+                     Longitude = as.numeric(Longitude))
+            
+            # add identifier for locs recorded during or after transmission end date
+            iDat$postEnd <- ifelse(iDat$Date >= ref[ref$wolfID == iWolf, "endDataPrelim"], 1, 0)
+              
+            
+            # make it spatial
+            iSp <- SpatialPointsDataFrame(
+              data.frame("x" = as.numeric(iDat$Longitude), "y" = as.numeric(iDat$Latitude)),
+              iDat, proj4string = ll)
+            
+            # convert lat/longs to correct utms (utm zones differed in raw files)
+            iUTM <- spTransform(iSp, utm)
+            
+            # add correct utms to data 
+            iDat$X <- iUTM@coords[ , "x"]
+            iDat$Y <- iUTM@coords[ , "y"]
+            
+            
+            # combine with other data for that wolf
+            iOut <- rbind(iOut, iDat)
+            
+            # remove duplicates
+            iOut <- distinct(iOut)
+            
+            # make spatial
+            iOutSp <- SpatialPointsDataFrame(
+              data.frame("x" = iOut$Longitude, "y" = iOut$Latitude),
+              iOut, proj4string = ll)            
+                    
+
+          }
           
           
-          # Study area in each projection
-          saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
-          saAEA <- st_transform(saLL, paste(aea))
-          saUTM <- st_transform(saLL, paste(utm))  
+          
+          # recreate blank dataframe
+          iOut <- as.data.frame(NULL)
+            
+            
+          # do whatever to make formatting match other wolves
+          
+          # add to combined dataframe for all wolves
+          
+          # recreate blank dataframe(s?) to store loop results in
           
           
-          
+        }
+        
+        
+        
+        # format my collar data to match column names etc and remove non-winter locs 
+        
+        # join data cleaned above to my data
+        
+        
+        # read in cleaned historic data and cut to just winter locations
+        
+
+         # join cleaned historic data to data cleaned above
+        
+        
+         # crop to buffered extent of elk distribution counts
+        
+        
+
+        
+        
+         # export data - master shp, master csv, anything individual/pack?
+        
+
+        
+
+        
+        #
+        
+        
+        
+        
+        
+        
+        
+        
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### #
+####   | OLDER CODE USING CLEANED AND FORMATTED HISTORIC DATA |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### # 
+        
+        
           
       #### trim wolf locations to potentially usable ones ####
           
