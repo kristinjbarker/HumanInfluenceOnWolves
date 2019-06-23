@@ -113,20 +113,19 @@
     
     
     #### Make count data spatial ####
-    elk <- SpatialPointsDataFrame(
+    elkDatSp <- SpatialPointsDataFrame(
       data.frame("x" = elkDat$UTM_X, "y" = elkDat$UTM_Y),
       elkDat, proj4string = utm)
     
     
-    # #### Export shapefile of elk counts ####
-    # writeOGR(elk,
-    #          dsn = paste0(datDir, "/Elk"),
-    #          layer = "elkCounts_2008-2019",
-    #          driver = "ESRI Shapefile",
-    #          overwrite_layer = TRUE)
+    #### Export shapefile of elk counts ####
+    writeOGR(elkDatSp,
+             dsn = paste0(datDir, "/Elk"),
+             layer = "elkCounts_2008-2019",
+             driver = "ESRI Shapefile",
+             overwrite_layer = TRUE)
     
-    
-    
+
     #### Account for number of elk counted at each location ####
     elkNums <- elkDat[rep(row.names(elkDat), elkDat$Total), c("UTM_X", "UTM_Y", "Yr")]
     elkNumSp <- SpatialPointsDataFrame(
