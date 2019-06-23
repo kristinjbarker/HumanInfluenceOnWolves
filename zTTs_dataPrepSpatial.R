@@ -1092,3 +1092,265 @@
     d2.2 <- apply(d2, 2, min)
     # ysss apply ftw
     
+    
+    
+    
+    
+    
+  #############################################################################################
+    
+    #### |PROCESSING NEW WOLF COLLAR DATA| ####
+    
+    #### pull wolfID from variable file names ####
+    
+        ## look for 3 or more numbers followed by a letter
+        
+        t <- "Huckleberry_883F_1"
+        gsub(pattern = "H", replacement = "F", x = t) #y
+        grep(pattern = "[:digit:]+[:alpha:]", x = t) #n
+        grep(pattern = "[1-9]+[a-z]", x = t) #n
+        grep(pattern = "[1-9]", x = t) #y
+        grep(pattern = "[1-9]+", x = t) #y
+        grep(pattern = "[a-z]", x = t) #y
+        grep(pattern = "[1-9]+[A-Z]", x = t) #oh. y.
+        gsub(pattern = "[1-9]+[A-Z]", replacement = "F", x = t) 
+        # perfect, now need to keep that instead of eplacing it
+        gregexpr(pattern = "[1-9]+[A-Z]", perl = TRUE, text = t) #n
+        
+        # learn about capture groups
+        # https://stackoverflow.com/questions/41559451/r-regex-match-pattern-and-store-only-the-pattern-in-a-new-column
+        
+        gsub(pattern = "[1-9]+[A-Z]", "\\1", t, perl = TRUE) # removes correct string
+        gsub(pattern = ".+([1-9]+[A-Z]).+", "\\1", t, perl = TRUE) #only keeps last number of ID
+        gsub(pattern = "([1-9]+[A-Z]).+", "\\1", t, perl = TRUE) # Keeps beginning of strong and entire wolfID
+        gsub(pattern = ".+([1-9][1-9][1-9]+[A-Z]).+", "\\1", t, perl = TRUE) # works but not sure it works with 4digit
+        t2 <- "Huckleberry_1883F_1"
+        gsub(pattern = ".+([1-9][1-9][1-9]+[A-Z]).+", "\\1", t2, perl = TRUE) # yep nope
+        # so need to figure out how to communicate "one or more repetitions" within the capture group
+        gsub(pattern = ".+(+[1-9]+[A-Z]).+", "\\1", t2, perl = TRUE) #n
+        gsub(pattern = ".+([1-9][A-Z]).+", "\\1", t2, perl = TRUE)  # still only the last number, so it's not reading the +
+        gsub(pattern = ".+[1-9]+[A-Z].+", replacement = "F", t) # replaces everything
+        gsub(pattern = ".+([1-9]+[A-Z]).+", replacement = "F", t) # ditto
+        gsub(pattern = ".+([1-9]+[A-Z]).+", "\\1", t, perl = TRUE)
+        regmatches(t, regexpr("[1-9]+[A-Z]", t)) # ha. ok then, something about the capture group just wasn't gonna work
+        regmatches(t2, regexpr("[1-9]+[A-Z]", t2)) # perf
+        
+        
+        
+    #### load correct collar file(s) based on wolf id ####
+        
+        # load a single file by using correct index
+        # get(iFileLoc)[grep(pattern = iWolf, x = get(iFileLoc))]
+        tF <- filesState
+        tP <- pathsState
+        tP
+        tP[1]
+        t <- get(tP[i])
+        # oh wtf, why did he change it to an xlsx?
+        
+        tF <- rawNames
+        tP <- rawPaths
+        tP[1]
+        t <- get(tP[1]) # error not found
+        file.exists(tP[1]) # true. huh.
+        t <- read.csv(tP[1]) # oh. duh. alright then.
+        grep(pattern = iWolf, x = tP)
+        
+        
+    #### read in files differently according to their shitty shitty format ####
+        
+    #### read in multiple files for some individuals ####
+        
+        
+        
+      
+################################################################################################## #  
+  
+
+        
+           
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ## ###
+####   | OLDER WOLF CODE USING CLEANED AND FORMATTED HISTORIC DATA |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ## ### 
+        
+        # for posterity's sake i guess
+          
+      #### trim wolf locations to potentially usable ones ####
+          
+          
+        ## clean and format collar & capture data ##
+          
+          # remove vhf collars
+          wolfFmt <- wolfRaw %>%
+            filter(grepl("GPS", Collar.Type)) %>%
+            # remove row number
+            dplyr::select(-c(Number)) %>%
+            # rename some columns
+            rename(wolf = Wolf,
+                   packCap = Pack,
+                   capUTMX = UTM_X,
+                   capUTMY = UTM_Y,
+                   capDate = CaptureDate,
+                   capLoc = CaptureLocation,
+                   collarType = Collar.Type,
+                   transEnd = Dropoff..mort.date,
+                   fate = Drop...Mort...Unknown.) %>%
+            # add capture year and wolf-year; make "?"s into Unknowns
+            mutate(capYr = substr(capDate, nchar(as.character(capDate)) - 3, nchar(as.character(capDate))),
+                   wolfYr = paste0(wolf, capYr),
+                   fate = ifelse(fate == "?", "Unk", paste(fate)),
+                   transEnd = ifelse(transEnd == "?", "Unk", paste(transEnd))) %>%
+            # remove duplicate capture entries (see MethodsNotes_HumanInflWolf.docx)
+            filter(wolfYr != "565F2009" | wolfYr == "565F2009" & !is.na(capUTMX)) %>%
+            filter(wolfYr != "787M2012" | wolfYr == "787M2012" & capDate != "12/20/2012") %>%
+            filter(wolfYr != "799M2014" | wolfYr == "799M2014" & capDate != "12/19/2014")
+          wolfFmt <- droplevels(wolfFmt)
+         
+          
+        
+        ## clean and format gps data ##
+          
+          
+          gpsFmt <- locsRaw %>%
+            # remove extraneous columns
+            dplyr::select(-c(Number, X.1)) %>%
+            # define winter (jan-mar); add wolf-year; fix trailing whitespace in LGV; format date
+            mutate(winter = ifelse(Month <= 3, 1, 0),
+                   Pack = trimws(Pack),
+                   wolfYr = paste0(Wolf, Year),
+                   Date = mdy(Date)) %>%
+            # only use winter locations for analysis
+            filter(winter == 1) 
+          gpsFmt <- droplevels(gpsFmt)
+
+          # make it spatial
+          gpsLl <- SpatialPointsDataFrame(
+            data.frame("x" = as.numeric(gpsFmt$Longitude), "y" = as.numeric(gpsFmt$Latitude)),
+            gpsFmt, proj4string = ll)
+          
+          # remove wolves clearly outside study area
+          gpsSa <- crop(gpsLl, extent(saLL))
+          
+
+          # identify wolves and wolf-years for consideration of inclusion in analysis
+          wolfYrsPrelim <- unique(gpsSa@data$wolfYr)
+          wolvesPrelim <- unique(gpsSa@data$Wolf)
+          
+          # # export csv to manually update with whether wolf will be included
+          # wolfYrsMaybe <- data.frame(wolfYr = wolfYrsPrelim) %>%
+          #   mutate(incl = "", locsOut = "") %>%
+          #   left_join(wolfFmt, by = "wolfYr")
+          # write.csv(wolfYrsMaybe, file = "wolfYrs_potential.csv", row.names = F)
+          # 
+          # 
+          # # export shapefile of each wolf-year's locations (to see which are in study area)
+          # for (i in 1:length(wolfYrsPrelim)) {
+          #   # identify individual
+          #   w <- wolfYrsPrelim[i]
+          #   # subset that indiv's gps data  
+          #   gpsW <- gpsSa@data[gpsSa@data$wolfYr == w, ]
+          #   gpsW <- droplevels(gpsW)
+          #   # make spatial and export for visual check in arcmap
+          #   sfW <- st_as_sf(gpsW, coords = c("Longitude", "Latitude"), crs = paste(ll))
+          #   st_write(sfW, paste0("../Data/Wolf/indivShps/", w, "prelim.shp"), delete_layer = TRUE)
+          # }
+          # 
+
+
+        
+          # read back in file telling which wolves included
+          wolfYrsAll <- read.csv("wolfYrs_potential_upd.csv")
+          wolfYrs <- filter(wolfYrsAll, incl == "y") # 34 wolf-yrs
+          length(unique(wolfYrs$wolf)) # 14 wolves - now 27 13ishjune
+          length(unique(wolfYrs$packCap)) # 6 packs - now 8
+          wolfYrsList <- as.character(unique(wolfYrs$wolfYr))
+          
+          
+          # filter wolf locs to only the wolfYrs you identified to include
+          locs <- semi_join(gpsFmt, dplyr::select(wolfYrs, wolfYr), by = "wolfYr")
+          locs <- droplevels(locs)
+          
+          # make them spatial
+          locsSpat <- SpatialPointsDataFrame(
+            data.frame("x" = locs$X, "y" = locs$Y),
+            locs, proj4string = utm)
+          
+          
+          
+        #### Delineate winter home range for each individual ####    
+          
+          
+          wolfYrsUDs <- kernelUD(locsSpat[ ,"wolfYr"], h = "href", same4all = FALSE)
+          wolfYrsHRs <- getverticeshr(wolfYrsUDs, percent = 95)
+          plot(wolfYrsHRs)
+          
+          
+          ## export HRs
+          writeOGR(wolfYrsHRs,
+                   dsn = paste0(datDir, "/Wolf"),
+                   layer = "winHRswolf",
+                   driver = "ESRI Shapefile",
+                   overwrite_layer = TRUE)
+
+
+
+          
+        #### Generate 5 available locations for each used location ####
+          
+          
+          ## create blank df to store results in
+          locsUA <- data.frame(matrix(NA, nrow = 0, ncol = 6))
+          colnames(locsUA) <- c("X", "Y", "Used", "wolfYr", "Date", "Time")
+          
+
+          for (i in 1:length(wolfYrsList)) {
+            
+            # identify individual
+            w <- wolfYrsList[i]
+            
+            # identify its locations 
+            wLocs <- filter(locs, wolfYr == w)
+            wLocs$Used <- 1
+            
+            # identify dates and times (for random selection)
+            wDates <- unique(wLocs$Date)
+            wTimes <- unique(wLocs$Time)
+
+            # calculate number of random locations to generate (5:1 used:avail)
+            nLocs <- NROW(wLocs)
+            nRndm <- nLocs * 5
+            
+            # identify HR polygon to sample from
+            wHR <- wolfYrsHRs[which(wolfYrsHRs@data$id == w),]
+            
+            # generate random locations
+            rndmSpat <- spsample(wHR, n = nRndm, "random") 
+            
+            # format random locations to combine with recorded locations
+            rndmDat <- data.frame(rndmSpat)
+            colnames(rndmDat) <- c("X", "Y")
+            rndmDat$Used <- 0
+            rndmDat$wolfYr <- w
+            
+            # randomly assign dates and times from those in recorded locations
+            rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
+            rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
+            
+            # combine random and recorded locations
+            wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Date", "Time"))
+            wDat <- rbind(wLocsOnly, rndmDat)
+            
+            # add to master dataframe
+            locsUA <- rbind(locsUA, wDat)
+
+          }
+
+                   
+          # export wolf locs to use in analysis
+          write.csv(locsUA, file = "wolfLocs-UsedAvail.csv", row.names = F)
+          
+          
+          
+
+            
+        
