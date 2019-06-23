@@ -141,10 +141,10 @@
 ### ### ### ### ### ### ### ### ### #    
 
     
-    ## make 99pct kdes per year
-    elkUD <- kernelUD(elkNumSp[,"Yr"], h = "href", grid = 70) 
-    elkKDE <- getverticeshr(elkUD, percent = 95)   
-    plot(elkKDE)
+    ## make 95pct kdes per year
+    elkUD <- kernelUD(elkNumSp[,"Yr"], h = "href", grid = 66)
+    elkKDE <- getverticeshr(elkUD, percent = 99)
+    plot(elkKDE, add = TRUE, col = "red")
     
     # export
     writeOGR(elkKDE,
