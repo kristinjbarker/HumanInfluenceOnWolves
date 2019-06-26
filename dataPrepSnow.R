@@ -93,5 +93,5 @@
     )
     
     swe <- rbind(gc, gv, tg) %>%
-      filter(Date > "2007-01-01")
+      filter(Date > "2004-01-01")
     write.csv(swe, file = paste0(datDir, "/Environment/swe2019.csv"), row.names = F)
