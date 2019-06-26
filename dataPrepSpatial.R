@@ -94,10 +94,7 @@
        
     ## Recreational use restrictions
     recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
-    recLegend <- recRaw@data %>%
-      dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
-      distinct() %>%
-      rename(recCol = MapColor, recMoto = Wheeled_Ve, recSled = Over_Snow_, recNonmoto = Non_Motori)
+
     
     ## Buildings and structures
     strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
