@@ -75,9 +75,8 @@
  
     
     
-    ## Study area and super-buffered study area (for clipping layers)
+    ## Buffered study area (for clipping layers)
     saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
-    saPlusLL <- st_read(paste0(datDir, "/Land/studyAreaPlusLL.shp")) 
 
         
     ## Canopy cover     
@@ -99,6 +98,9 @@
       dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
       distinct() %>%
       rename(recCol = MapColor, recMoto = Wheeled_Ve, recSled = Over_Snow_, recNonmoto = Non_Motori)
+    
+    ## Buildings and structures
+    strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
 
  
 
@@ -106,88 +108,79 @@
   
     
     
-### ### ### ### ### ### ### ### ### ### ### ### ### ###    
-####   | CROPPED, PROJECTED, RESOLUTION-ED DATA |  ####
-### ### ### ### ### ### ### ### ### ### ### ### ### ###   
+### ### ### ###  ### ### ###    
+####   | RASTER DATA |  ####
+### ### ### ###  ### ### ###   
     
 
 
-    ## Study area, in other projections
+    #### Delineate study area in other projections ####
       
       saAEA <- st_transform(saLL, paste(aea))
-      saPlusAEA <- st_transform(saPlusLL, paste(aea))
       saUTM <- st_transform(saLL, paste(utm))
-      saPlusUTM <- st_transform(saPlusLL, paste(utm))
 
+ 
       
-      
-      
-      
-    #### Crop all to hugely buffered study area (just to speed reprojecting)  ####
-    
-      canPrelim <- crop(canRaw, extent(saPlusAEA)) 
-      elevPrelim <- crop(demRaw, extent(saPlusAEA))
-      lcPrelim <- crop(lcRaw, extent(saPlusAEA))
-      recUTM <- crop(recRaw, extent(saPlusUTM))
-
-  
-      
+    #### Crop spatial layers to study area ####
           
-    #### Project all to UTMs (and get aspect/ruggedness/slope from dem) ####
-    
-      
-      canUTM <- projectRaster(canPrelim, crs = utm)
-      elevUTM <- projectRaster(elevPrelim, crs = utm) 
-      aspUTM <- terrain(elevUTM, opt = 'aspect') 
-      rugUTM <- terrain(elevUTM, opt = 'tri')      
-      slopeUTM <- terrain(elevUTM, opt = 'slope') 
-      lcUTM <- projectRaster(lcPrelim, crs = utm)
+      canCrop <- crop(canRaw, saAEA)
+      elevCrop <- crop(demRaw, saAEA) 
+      lcCrop <- crop(lcRaw, saAEA)
+      recCrop <- crop(recRaw, saUTM)
 
       
       
-    #### Crop to actual study area ####
-          
-      canCrop <- crop(canUTM, saUTM)
-      elevCrop <- crop(elevUTM, saUTM) 
-      aspCrop <- crop(aspUTM, saUTM) 
-      rugCrop <- crop(rugUTM, saUTM)      
-      slopeCrop <- crop(slopeUTM, saUTM) 
-      lcCrop <- crop(lcUTM, saUTM)
-      recCrop <- recUTM
-      motoCrop <- motoUTM
-
+    #### Match resolutions, and get aspect/ruggedness/slope from DEM ####
+      
+      can <- canCrop # canopy's 30m x 30m resolution is coarsest (and matches lc)
+      elev <- resample(elevCrop, canCrop, "bilinear")
+      asp <- terrain(elev, opt = 'aspect') 
+      rug <- terrain(elev, opt = 'tri')      
+      slope <- terrain(elev, opt = 'slope')   
       
       
+    #### Rasterize recreation data ####  
       
-    #### Match resolutions and stack rasters ####
-
-      
-      # match
-      can <- canCrop
-      elev <- resample(elevCrop, can, "ngb")
-      asp <- resample(aspCrop, can, "ngb")
-      rug <- resample(rugCrop, can, "ngb")
-      slope <- resample(slopeCrop, can, "ngb")
-      lc <- lcCrop
+      recAEA <- spTransform(recCrop, aea)
       recRast <- raster(nrow = nrow(can), ncol = ncol(can))
       extent(recRast) = extent(can)
-      rec <- rasterize(recCrop, recRast, field = "MapColor")
+      rec <- rasterize(recAEA, recRast, field = "MapColor")
+
+    
+    #### Combine and export ####
      
       # stack
-      rastStk <- stack(can, elev, asp, rug, slope, lc, rec)
+      rastStk <- stack(can, elev, asp, rug, slope, lcCrop, rec)
       names(rastStk) <- c("can", "elev", "asp", "rug", "slope", "lc", "rec")
       
       # export
       writeRaster(rastStk, 
-                  paste0(datDir, "/xProcessedRasters/", names(rastStk)), 
+                  paste0(datDir, "/xProcessedRasters/AEA", names(rastStk)), 
                   bylayer = TRUE,
                   format = "GTiff",
                   overwrite = TRUE)
 
+      
 
-    #### Export structure shapefile ####
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ###
+####   | STRUCTURE DATA |  ####
+### ### ### ### ### ### ### ###
+       
+      
+    ## Crop to study area  
+    strucCrop <- st_crop(strucRaw, saLL)
 
-      st_write(strucUTM, paste0(datDir, "/Human/Structures/strucsUTM.shp"))
+      
+    ## Transform to AEA to match other spatial data
+    strucAEA <- st_transform(strucRaw, paste(aea))  
+      
+            
+    ## Export shapefile
+    st_write(strucAEA, paste0(datDir, "/Human/Structures/strucsAEA.shp"))
       
       
 # save.image(file = "dataPrepSpatial.RData")
