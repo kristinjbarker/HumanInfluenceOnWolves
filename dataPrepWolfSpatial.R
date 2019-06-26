@@ -58,8 +58,14 @@
     utm <- CRS("+init=epsg:3742") # NAD83(HARN)/UTMzone12N 
     aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
     
- 
+    
+    
+  #### Increase memory limit ####
+    
+    memory.limit(size = 7500000) 
 
+    
+    
 ################################################################################################## #  
   
     
@@ -78,44 +84,26 @@
              Date = ymd(Date),
              Year = substr(wolfYr, nchar(wolfYr) - 3, nchar(wolfYr)))
 
-    
-    
-## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
-    
-    
-  ####  ~~ TEMPORARY CODE ~~ just use a few wolf locs to make sure code works. delete this ####
-      
-    
-    # want at least one location per year and would be good to have range of elevs etc
-    set.seed(420)
-    locs <- sample_n(locs, size = 100, replace = FALSE) 
-    locs <- cbind(rowNum = rownames(locs), locs)
-    unique(sort(as.numeric(locs$Year)))
-    write.csv(locs, "testLocs_subset.csv", row.names = FALSE) # to double-check things in arc
-    
-    
-    
-    
-## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
-    
-    
+
     
     #### Kill Sites: Used & Available ####   
     
-    kills <- read.csv("killSites.csv")
+    # kills <- read.csv("killSites.csv")
         
-        
-     #### Environmental Data #### 
     
-      # read in rasters to extract point data from
+        
+     #### Raster and snowtel data #### 
+    
+    
+      # stack to extract data from (aspect, canopy, elev, landcov, rec, ruggedness, slope)
       files.rast <- list.files(
         path = paste0(datDir, "/xProcessedRasters/"),
-        pattern = ".tif$",
+        pattern = "^AEA.*tif$",
         full.names = TRUE)
       rast <- stack(files.rast)
       names(rast)
     
-      # snow
+      # snow (snow water equivalence from snotel sites in study area)
       snowRaw <- read.csv(paste0(datDir, "/Environment/swe2019.csv"))
     
       
@@ -124,18 +112,27 @@
       
       # roads
       motoUTM <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoads')
+      motoAEA <- spTransform(motoUTM, aea)
 
       
       # feedgrounds
       feedLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
-      feedUTM <- spTransform(feedLL, utm)
+      feedAEA <- spTransform(feedLL, aea)
       
       # structures
-      strucUTM <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsUTM')
+      strucAEA <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsAEA')
       
       # prey availability
       preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
- 
+      preyAEA <- spTransform(preyUTM, aea)
+      
+      
+      
+    #### Metadata ####
+      
+      # landcover (maps number to type)
+      lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv")) 
+
    
     
 ################################################################################################## #  
@@ -152,42 +149,22 @@
     locsUTM <- SpatialPointsDataFrame(
       data.frame("x" = locs$X, "y" = locs$Y), 
       locs, proj4string = utm)
+      
+    #### Match wolf data projection to spatial data projection
+      
+      locsAEA <- spTransform(locsUTM, aea)
 
     
     #### Extract spatial data at each wolf or kill location ####
     
-    extRast <- extract(rast, locsUTM, buffer = NULL) # consider buffering points
-    
-    
-    
-    ## below code is from TTs dealing with landcover
-    ## it extracts lc values per wolf loc and correctly identifies the landcover type
-    
-        # wolfLocs <- read.csv("wolfLocs-UsedAvail.csv")
-        # locsUTM <- SpatialPointsDataFrame(
-        #   data.frame("x" = as.numeric(wolfLocs$X), "y" = as.numeric(wolfLocs$Y)),
-        #   wolfLocs, proj4string = utm)
-        # locsAEA <- spTransform(locsUTM, aea)
-        # 
-        # extLc <- extract(lcCrop, locsAEA)
-        # 
-        # locsAEA$lcVal <- extract(lcCrop, locsAEA) # noice
-        # 
-        # lcTypes <- lcLegendRaw %>%
-        #   rename(lcVal = Value, lcType = Classification, lcClass = GenericClass) %>%
-        #   dplyr::select(lcVal, lcType, lcClass)
-        # 
-        # locsAEA@data <- left_join(locsAEA@data, lcTypes, by = "lcVal")
-
+    extRast <- extract(rast, locsAEA, buffer = NULL) # consider buffering points
     
     
     #### combine with location data ####
     
     ext <- cbind(extRast, locs)
-    
 
- 
-    
+
     
 ################################################################################################## #  
   
@@ -201,7 +178,7 @@
     
         
         # calculate shortest distance from each point to a road
-        distRdRaw <- gDistance(locsUTM, motoUTM, byid = TRUE)
+        distRdRaw <- gDistance(locsAEA, motoAEA, byid = TRUE)
         
     
         # make distance longform
@@ -213,7 +190,7 @@
       ## Feedgrounds ##      
         
         # calc distance to all feedgrounds
-        distFeedRaw <- gDistance(locsUTM, feedUTM, byid = TRUE)
+        distFeedRaw <- gDistance(locsAEA, feedAEA, byid = TRUE)
         
         # identify the closest feedground (shortest distance)
         distFeedMin <- apply(distFeedRaw, 2, min)
@@ -226,11 +203,20 @@
         
         
 
-      ## Structures ##      
+      ## Structures ##   
         
-        # calc distance to all structures
-        distStrucRaw <- gDistance(locsUTM, strucUTM, byid = TRUE)
+        # aggregate structure polygons to reduce computing power needed
+        strucAgg <- unionSpatialPolygons(
+          SpatialPolygons(strucAEA@polygons), 
+          rep("1", times = length(strucAEA)))
         
+        # and crop to slightly-buffered extent of wolf locs to further reduce
+        strucCrop <- crop(strucAgg, extent(locsAEA) + 100)
+        
+        # calc shortest distance from each point to a structure
+        distStrucRaw <- gDistance(locsAEA, strucCrop, byid = TRUE)
+        
+
         # identify the shortest distance
         distStrucMin <- apply(distStrucRaw, 2, min)
         
@@ -238,7 +224,7 @@
         distStruc <- data.frame(
           rowNum = names(distStrucMin),
           distStruc = distStrucMin)  
-        
+            
         
         
       ## Prey availability ##
@@ -253,18 +239,24 @@
         
         for (i in 1:length(yrs)) {
           
-          # pull polygon of elk distribution during that year
+          # identify year (but for early wolves, use 2008 elk distn bc that's earliest i have)
           iYr <- yrs[i]
-          iElk <- preyUTM[preyUTM$id == iYr, ]
-          iLocs <- locsUTM[locsUTM$Year == iYr, ]
+          iYr2 <- ifelse(iYr < 2008, 2008, iYr)
+          
+          # pull polygon of elk distribution during that year
+          iElk <- preyAEA[preyAEA$id == iYr2, ]
+          iLocs <- locsAEA[locsAEA$Year == iYr, ]
 
           # calculate distance to elk polygon
           distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
-          
+            
+          # identify the shortest distance
+          distElkMin <- apply(distElkRaw, 2, min)
+        
           # make it longform
           distElk <- data.frame(
-            rowNum = colnames(distElkRaw),
-            distPrey = distElkRaw[1,])
+            rowNum = names(distElkMin),
+            distPrey = distElkMin)
         
           # join to master
           distPrey <- rbind(distPrey, distElk) 
@@ -278,7 +270,8 @@
         
         
         # join all distance values back to main dataframe
-        distDat <- locsUTM@data %>%
+        distDat <- locsAEA@data %>%
+          mutate(rowNum = rownames(locsAEA@data)) %>%
           left_join(distRd, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
           left_join(distStruc, by = "rowNum") %>%
@@ -304,39 +297,18 @@
     ## format snow data (date as such)   
     snow <- snowRaw %>%
       mutate(Date = ymd(Date))
-  
-    
-    ## placeholder
-    modDat <- ext %>%
-      mutate(SWE = NA)
-    
-    
-    
-    
-    #### KRISTIN YOU LEFT OFF HERE ####
-    
-    
-      ## loop works (yay) 
-      ## but errors out because some locs have NA eev ##
-    
-    
 
-      ## so next step is to check this in arcmap and figure out the NA extraction issue ##    
-    z <- distDat %>%
-      dplyr::select(rowNum, distRd, distFeed, distStruc, distPrey) %>%
-      left_join(ext, by = "rowNum")
-    write.csv(z, file = "testDat.csv", row.names = FALSE)
-    
-    
-    
+    ## create new dataframe to combine snow values with extracted raster values
+    extSnow <- ext %>%
+      mutate(SWE = NA, rowNum = rownames(ext))
+
     
     ## for each used & available wolf location   
-    for(i in 1:34) {
-   # for(i in 1:nrow(modDat)) {
+    for(i in 1:nrow(swe)) {
       
       # identify its date and elevation
-      iDate <- modDat[i, "Date"]
-      iElev <- modDat[i, "elev"]
+      iDate <- extSnow[i, "Date"]
+      iElev <- extSnow[i, "elev"]
       
       # find the snotel site closest in elevation
       iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
@@ -345,10 +317,58 @@
       iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "SWE"]
       
       # add the value to the dataframe
-      modDat[i, "SWE"] <- iSWE
+      extSnow[i, "SWE"] <- iSWE
       
     }
 
-    ####     
+    
+
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### ### ### ##
+####  | COMBINE AND FORMAT COVARIATE DATA  |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ##
         
-     
+    
+    #### if not run in full from above: modDatRaw <- read.csv("modDat.csv")
+    
+    #### combine all covariate data ####
+    
+      modDatRaw <- distDat %>%
+        dplyr::select(c(rowNum, distRd, distFeed, distStruc, distPrey)) %>%
+        left_join(extSnow, by = "rowNum") %>%
+        dplyr::select(c(wolfYr, Wolf, Pack, Used, 
+                        asp, can, elev, lc, rec, rug, slope, SWE, 
+                        distRd, distFeed, distStruc, distPrey, 
+                        datetime, Date, Time, Month, Day, Year,
+                        X, Y, Latitude, Longitude, rowNum))
+      
+    
+    #### map landcover values to landcover type ####
+
+        # format and rename landcover classification info
+        lcTypes <- lcLegendRaw %>%
+          rename(lcVal = Value, lcType = Classification, lcClass = GenericClass) %>%
+          dplyr::select(lcVal, lcType, lcClass)
+
+        # add landcover classification info to model data
+        modDat <- left_join(modDatRaw, lcTypes, by = c("lc" = "lcVal"))
+        
+        # fix NAs
+        
+    
+    
+    
+    ## make it spatial
+    modDatSp <- SpatialPointsDataFrame(
+      data.frame("x" = modDat$X, "y" = modDat$Y),
+      modDat, proj4string = utm)
+    
+    
+    ## export
+    write.csv(modDat, "modDat.csv", row.names = F)
+    writeOGR(modDatSp, paste0(datDir, "/Wolf"),
+             layer = "humanInfl-modDat",
+             driver = "ESRI Shapefile",
+             overwrite_layer = TRUE)
