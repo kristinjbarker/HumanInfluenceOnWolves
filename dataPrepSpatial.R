@@ -99,13 +99,6 @@
       dplyr::select(MapColor, Wheeled_Ve, Over_Snow_, Non_Motori) %>%
       distinct() %>%
       rename(recCol = MapColor, recMoto = Wheeled_Ve, recSled = Over_Snow_, recNonmoto = Non_Motori)
-        
-
-    
-    ## Buildings and Structures
-    strucRaw <- st_read(paste0(datDir, "/Human/Structures/Wyoming.geojson"))
-
-
 
  
 
@@ -130,12 +123,11 @@
       
       
       
-    #### Crop all to study area  ####
+    #### Crop all to hugely buffered study area (just to speed reprojecting)  ####
     
       canPrelim <- crop(canRaw, extent(saPlusAEA)) 
       elevPrelim <- crop(demRaw, extent(saPlusAEA))
       lcPrelim <- crop(lcRaw, extent(saPlusAEA))
-      strucPrelim <- st_crop(strucRaw, extent(saLL)) ## Error if use saPlus
       recUTM <- crop(recRaw, extent(saPlusUTM))
 
   
@@ -150,7 +142,6 @@
       rugUTM <- terrain(elevUTM, opt = 'tri')      
       slopeUTM <- terrain(elevUTM, opt = 'slope') 
       lcUTM <- projectRaster(lcPrelim, crs = utm)
-      strucUTM <- st_transform(strucPrelim, paste(utm))
 
       
       
@@ -162,8 +153,6 @@
       rugCrop <- crop(rugUTM, saUTM)      
       slopeCrop <- crop(slopeUTM, saUTM) 
       lcCrop <- crop(lcUTM, saUTM)
-      strucPrelim2 <- st_crop(strucUTM, saUTM)
- #     strucCrop <- as(strucUTM, 'Spatial')
       recCrop <- recUTM
       motoCrop <- motoUTM
 
