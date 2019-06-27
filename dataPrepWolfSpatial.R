@@ -101,7 +101,8 @@
         pattern = "^AEA.*tif$",
         full.names = TRUE)
       rast <- stack(files.rast)
-      names(rast)
+      # remove "AEA" from raster names
+      names(rast) <- substr(names(rast), 4, nchar(names(rast)))
     
       # snow (snow water equivalence from snotel sites in study area)
       snowRaw <- read.csv(paste0(datDir, "/Environment/swe2019.csv"))
@@ -120,7 +121,7 @@
       feedAEA <- spTransform(feedLL, aea)
       
       # structures
-      strucAEA <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsAEA')
+      strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
       
       # prey availability
       preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
@@ -203,16 +204,19 @@
         
         
 
-      ## Structures ##   
+      ## Structures ## 
+        
+        # transform to match projection of other spatial data
+        strucAEA <- spTransform(strucLL, aea)
         
         # aggregate structure polygons to reduce computing power needed
         strucAgg <- unionSpatialPolygons(
           SpatialPolygons(strucAEA@polygons), 
           rep("1", times = length(strucAEA)))
         
-        # and crop to slightly-buffered extent of wolf locs to further reduce
+        # and crop to slightly-buffered extent of wolf locs to further reduce size
         strucCrop <- crop(strucAgg, extent(locsAEA) + 100)
-        
+
         # calc shortest distance from each point to a structure
         distStrucRaw <- gDistance(locsAEA, strucCrop, byid = TRUE)
         
@@ -300,11 +304,11 @@
 
     ## create new dataframe to combine snow values with extracted raster values
     extSnow <- ext %>%
-      mutate(SWE = NA, rowNum = rownames(ext))
+      mutate(swe = NA, rowNum = rownames(ext))
 
     
     ## for each used & available wolf location   
-    for(i in 1:nrow(swe)) {
+    for(i in 1:nrow(extSnow)) {
       
       # identify its date and elevation
       iDate <- extSnow[i, "Date"]
@@ -317,7 +321,7 @@
       iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "SWE"]
       
       # add the value to the dataframe
-      extSnow[i, "SWE"] <- iSWE
+      extSnow[i, "swe"] <- iSWE
       
     }
 
@@ -339,7 +343,7 @@
         dplyr::select(c(rowNum, distRd, distFeed, distStruc, distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(c(wolfYr, Wolf, Pack, Used, 
-                        asp, can, elev, lc, rec, rug, slope, SWE, 
+                        asp, can, elev, lc, rec, rug, slope, swe, 
                         distRd, distFeed, distStruc, distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum))
@@ -354,21 +358,39 @@
 
         # add landcover classification info to model data
         modDat <- left_join(modDatRaw, lcTypes, by = c("lc" = "lcVal"))
+
         
-        # fix NAs
+        
+        
+        
+        #### ~~ KRISTIN YOU LEFT OFF HERE ~~ ####        
+    
+        
+        
+        
+    #### map rec access values to restrictions ####
+
+        
+        # you can pull these values from the rec data, but not positive if it's read in here or not
         
     
-    
-    
-    ## make it spatial
-    modDatSp <- SpatialPointsDataFrame(
-      data.frame("x" = modDat$X, "y" = modDat$Y),
-      modDat, proj4string = utm)
-    
-    
-    ## export
-    write.csv(modDat, "modDat.csv", row.names = F)
-    writeOGR(modDatSp, paste0(datDir, "/Wolf"),
-             layer = "humanInfl-modDat",
-             driver = "ESRI Shapefile",
-             overwrite_layer = TRUE)
+    #### translate aspect to something more usable? maybe ask owen about this ####
+        
+        
+        
+        
+    #### finish him ####
+        
+        
+        ## make it spatial
+        modDatSp <- SpatialPointsDataFrame(
+          data.frame("x" = modDat$X, "y" = modDat$Y),
+          modDat, proj4string = utm)
+        
+        
+        ## export
+        write.csv(modDat, "modDat.csv", row.names = F)
+        writeOGR(modDatSp, paste0(datDir, "/Wolf"),
+                 layer = "humanInfl-modDat",
+                 driver = "ESRI Shapefile",
+                 overwrite_layer = TRUE)
