@@ -173,11 +173,11 @@
 
       
     ## Transform to AEA to match other spatial data
-    strucAEA <- st_transform(strucRaw, paste(aea))  
+    #strucAEA <- st_transform(strucRaw, paste(aea))  
       
             
     ## Export shapefile
-    st_write(strucAEA, paste0(datDir, "/Human/Structures/strucsAEA.shp"))
+    st_write(strucCrop, paste0(datDir, "/Human/Structures/strucsLL.shp"))
       
       
 # save.image(file = "dataPrepSpatial.RData")
