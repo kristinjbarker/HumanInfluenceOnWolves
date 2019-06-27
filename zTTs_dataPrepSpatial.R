@@ -1351,6 +1351,545 @@
           
           
           
+################################################################################################## #  
+  
+
+        
+           
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ## ###
+####   | FIXING WOLF PROCESSING BS |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ## ### 
+          
+          
+          
+          #### duplicate wolfYrs ####
+          
+          z <- locs[locs$wolfYr == "883F-2015", "Pack"]
+          z
+          # she has 2 diff packs, why?
+          
+          zwd <- intersect(wolvesHist, wolvesThem)
+          zwd
+          
+          sort(unique(rawHist$Year))
+          sort(unique(newOut$Year))
+          
+          # overlapping years 2014, 2015, 2016 historic data and "newer" data
+          # prob easiest to skip processing "new" data if it was already processed
+          
+          # check 883 locs 1st
+          z <- rawHist[rawHist$Wolf == "883F" & rawHist$Year == 2015, ]
+          z1 <- z %>%
+            dplyr::select(-c("Number", "X.1")) %>%
+            mutate(datetime = ymd_hms(datetime),
+                   Date = as.Date(Date, format = "%m/%d/%Y"))
+          zz <- newOut[newOut$Wolf == "883F" & newOut$Year == 2015, ]
+          zzz <- intersect(z1, zz)
+          
+          
+          ## you jleft off here, code above kinda sucks
+          
+          ## you're trying to figure out
+            ## a. which wolf-years you have duplicate data for, and 
+            ## b. which data source to use when you have 2
+          
+          ## looks like they may not be exact duplicates, 
+            ## eg timezone off by an hour or XY off by a meter
+        
+          # try using denver timezone so it knows when to switch
+          OlsonNames() # see all timezone options
+          
+          # alright so now back to the wolf code 
+          # if wolfyr is in historic, remove it from new
+          
+          # check which wolves we expect this to happen with
+          # ...we... me, myself, and i? 
+          # jfc get to work kristin
+          
+          wolfYrsHist <- locsHist %>%
+            mutate(wolfYr = paste0(Wolf, "-", Year)) %>%
+            dplyr::select(wolfYr) %>%
+            distinct()
+            
+          wolfYrsThem <- newOut %>%
+            mutate(wolfYr = paste0(Wolf, "-", Year)) %>%
+            dplyr::select(wolfYr) %>%
+            distinct()
+            
+          wolfYrsMe <- locsMe %>%
+            mutate(wolfYr = paste0(Wolf, "-", Year)) %>%
+            dplyr::select(wolfYr) %>%
+            distinct()
+          
+          histThem <- intersect(wolfYrsHist, wolfYrsThem)
+          histMe <- intersect(wolfYrsHist, wolfYrsMe)
+          themMe <- intersect(wolfYrsThem, wolfYrsMe)
+          
+          histThem # 7, 4 wolves (883F, 974M, 799M, 997M) all 2016 & 2016 except 997M just 2015
+          histMe # 0
+          themMe # 0
+          
+          ## new question: if there are 7 duplicate wolfYrs why do i only have 3 issues?
+          
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[1, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[2, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[3, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[4, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[5, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[6, "wolfYr"])) #y
+          nrow(filter(locsHist, paste0(Wolf, "-", Year) == histThem[7, "wolfYr"])) #y
+          
+          # ok ijust need to get over it and remove these
 
             
+                      ### ### ### ### ### ###  ### ### ### ### ### ### ###
+                      #   DELINEATING USED & AVAILABLE COLLAR LOCATIONS  #
+                      #       FOR ANALYSIS OF HUMAN INFLUENCE ON WOLF    #
+                      #           DISTRIBUTIONS AND BEHAVIORS            #
+                      #                                                  #
+                      #            Kristin Barker | Summer 2019          #
+                      #               kristinjbarker@gmail.com           #
+                      ### ### ### ### ### ###  ### ### ### ### ### ### ###
+
+
+################################################################################################## #
+
+### ### ### ### ### #
+####  | SETUP |  ####
+### ### ### ### ### #
+
+
+  
+  #### Set working directory and filepath to spatial data ####
+
+      setwd("C:\\Users\\Kristin\\Box Sync\\Documents\\HumanInfluenceOnWolves")
+      datDir <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data"
+
+  
+
+  #### Install and load any necessary packages you don't already have ####
+  
+    
+    # list of packages needed
+    packages <- c(
+      "raster",        ## for parts of justin clapp's code
+      "maps",          ## for parts of justin clapp's code
+      "maptools",      ## for cluster algorithm & kmlPoints
+      "rgdal",         ## for cluster algorithm & spatial/shapefile work 
+      "sp",            ## spatial work
+      "sf",            ## for spatial work like the kids are doing it these days
+      "lubridate",     ## manipulate datetime data inside dplyr pipes
+      "adehabitatHR",   ## estimate home ranges
+      "dplyr")         ## data manipulation and general awesomeness
+    
+    
+    # Check whether the packages listed above are installed, 
+    # install any you don't already have, then load them all 
+    # (code by Steven Worthington: https://gist.github.com/stevenworthington/3178163)   
+    ipak <- function(pkg){
+      new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+      if (length(new.pkg)) 
+        install.packages(new.pkg, dependencies = TRUE)
+      sapply(pkg, require, character.only = TRUE)
+    }    
+    ipak(packages) 
+    rm(ipak, packages)
+
+    
+  
+  #### Define spatial projections ####
+    
+    ll <- CRS("+init=epsg:4326") # WGS 84
+    utm <- CRS("+init=epsg:3742") # NAD83(HARN)/UTMzone12N 
+    aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
+    
+ 
+
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### #
+####   | RAW DATA |  ####
+### ### ### ### ### ### #
+ 
+    
+    
+    #### Wolf, Pack, and Collar Information #### 
+    
+    
+        ## collar data from GTNP ## 
+    
+          # gps and vhf collar data
+          locsRaw <- read.csv(paste0(datDir, "\\Wolf\\wolfHistoricCleaned.csv"))
+    
+          # capture and collar info
+          wolfRaw <- read.csv(paste0(datDir, "\\Wolf\\CaptureAndCollarInfo\\wolf_metadata.csv"))
+          
+          
+          # Study area in each projection
+          saLL <- st_read(paste0(datDir, "/Land/studyAreaLL.shp")) 
+          saAEA <- st_transform(saLL, paste(aea))
+          saUTM <- st_transform(saLL, paste(utm))  
+          
+          
+          
+          
+      #### trim wolf locations to potentially usable ones ####
+          
+          
+        ## clean and format collar & capture data ##
+          
+          # remove vhf collars
+          wolfFmt <- wolfRaw %>%
+            filter(grepl("GPS", Collar.Type)) %>%
+            # remove row number
+            dplyr::select(-c(Number)) %>%
+            # rename some columns
+            rename(wolf = Wolf,
+                   packCap = Pack,
+                   capUTMX = UTM_X,
+                   capUTMY = UTM_Y,
+                   capDate = CaptureDate,
+                   capLoc = CaptureLocation,
+                   collarType = Collar.Type,
+                   transEnd = Dropoff..mort.date,
+                   fate = Drop...Mort...Unknown.) %>%
+            # add capture year and wolf-year; make "?"s into Unknowns
+            mutate(capYr = substr(capDate, nchar(as.character(capDate)) - 3, nchar(as.character(capDate))),
+                   wolfYr = paste0(wolf, capYr),
+                   fate = ifelse(fate == "?", "Unk", paste(fate)),
+                   transEnd = ifelse(transEnd == "?", "Unk", paste(transEnd))) %>%
+            # remove duplicate capture entries (see MethodsNotes_HumanInflWolf.docx)
+            filter(wolfYr != "565F2009" | wolfYr == "565F2009" & !is.na(capUTMX)) %>%
+            filter(wolfYr != "787M2012" | wolfYr == "787M2012" & capDate != "12/20/2012") %>%
+            filter(wolfYr != "799M2014" | wolfYr == "799M2014" & capDate != "12/19/2014")
+          wolfFmt <- droplevels(wolfFmt)
+         
+          
         
+        ## clean and format gps data ##
+          
+          
+          gpsFmt <- locsRaw %>%
+            # remove extraneous columns
+            dplyr::select(-c(Number, X.1)) %>%
+            # define winter (jan-mar); add wolf-year; fix trailing whitespace in LGV; format date
+            mutate(winter = ifelse(Month <= 3, 1, 0),
+                   Pack = trimws(Pack),
+                   wolfYr = paste0(Wolf, Year),
+                   Date = mdy(Date)) %>%
+            # only use winter locations for analysis
+            filter(winter == 1) 
+          gpsFmt <- droplevels(gpsFmt)
+
+          # make it spatial
+          gpsLl <- SpatialPointsDataFrame(
+            data.frame("x" = as.numeric(gpsFmt$Longitude), "y" = as.numeric(gpsFmt$Latitude)),
+            gpsFmt, proj4string = ll)
+          
+          # remove wolves clearly outside study area
+          gpsSa <- crop(gpsLl, extent(saLL))
+          
+
+          # identify wolves and wolf-years for consideration of inclusion in analysis
+          wolfYrsPrelim <- unique(gpsSa@data$wolfYr)
+          wolvesPrelim <- unique(gpsSa@data$Wolf)
+          
+          # # export csv to manually update with whether wolf will be included
+          # wolfYrsMaybe <- data.frame(wolfYr = wolfYrsPrelim) %>%
+          #   mutate(incl = "", locsOut = "") %>%
+          #   left_join(wolfFmt, by = "wolfYr")
+          # write.csv(wolfYrsMaybe, file = "wolfYrs_potential.csv", row.names = F)
+          # 
+          # 
+          # # export shapefile of each wolf-year's locations (to see which are in study area)
+          # for (i in 1:length(wolfYrsPrelim)) {
+          #   # identify individual
+          #   w <- wolfYrsPrelim[i]
+          #   # subset that indiv's gps data  
+          #   gpsW <- gpsSa@data[gpsSa@data$wolfYr == w, ]
+          #   gpsW <- droplevels(gpsW)
+          #   # make spatial and export for visual check in arcmap
+          #   sfW <- st_as_sf(gpsW, coords = c("Longitude", "Latitude"), crs = paste(ll))
+          #   st_write(sfW, paste0("../Data/Wolf/indivShps/", w, "prelim.shp"), delete_layer = TRUE)
+          # }
+          # 
+
+
+        
+          # read back in file telling which wolves included
+          wolfYrsAll <- read.csv("wolfYrs_potential_upd.csv")
+          wolfYrs <- filter(wolfYrsAll, incl == "y") # 34 wolf-yrs
+          length(unique(wolfYrs$wolf)) # 14 wolves - now 27 13ishjune
+          length(unique(wolfYrs$packCap)) # 6 packs - now 8
+          wolfYrsList <- as.character(unique(wolfYrs$wolfYr))
+          
+          
+          # filter wolf locs to only the wolfYrs you identified to include
+          locs <- semi_join(gpsFmt, dplyr::select(wolfYrs, wolfYr), by = "wolfYr")
+          locs <- droplevels(locs)
+          
+          # make them spatial
+          locsSpat <- SpatialPointsDataFrame(
+            data.frame("x" = locs$X, "y" = locs$Y),
+            locs, proj4string = utm)
+          
+          
+          
+        #### Delineate winter home range for each individual ####    
+          
+          
+          wolfYrsUDs <- kernelUD(locsSpat[ ,"wolfYr"], h = "href", same4all = FALSE)
+          wolfYrsHRs <- getverticeshr(wolfYrsUDs, percent = 95)
+          plot(wolfYrsHRs)
+          
+          
+          ## export HRs
+          writeOGR(wolfYrsHRs,
+                   dsn = paste0(datDir, "/Wolf"),
+                   layer = "winHRswolf",
+                   driver = "ESRI Shapefile",
+                   overwrite_layer = TRUE)
+
+
+
+          
+        #### Generate 5 available locations for each used location ####
+          
+          
+          ## create blank df to store results in
+          locsUA <- data.frame(matrix(NA, nrow = 0, ncol = 6))
+          colnames(locsUA) <- c("X", "Y", "Used", "wolfYr", "Date", "Time")
+          
+
+          for (i in 1:length(wolfYrsList)) {
+            
+            # identify individual
+            w <- wolfYrsList[i]
+            
+            # identify its locations 
+            wLocs <- filter(locs, wolfYr == w)
+            wLocs$Used <- 1
+            
+            # identify dates and times (for random selection)
+            wDates <- unique(wLocs$Date)
+            wTimes <- unique(wLocs$Time)
+
+            # calculate number of random locations to generate (5:1 used:avail)
+            nLocs <- NROW(wLocs)
+            nRndm <- nLocs * 5
+            
+            # identify HR polygon to sample from
+            wHR <- wolfYrsHRs[which(wolfYrsHRs@data$id == w),]
+            
+            # generate random locations
+            rndmSpat <- spsample(wHR, n = nRndm, "random") 
+            
+            # format random locations to combine with recorded locations
+            rndmDat <- data.frame(rndmSpat)
+            colnames(rndmDat) <- c("X", "Y")
+            rndmDat$Used <- 0
+            rndmDat$wolfYr <- w
+            
+            # randomly assign dates and times from those in recorded locations
+            rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
+            rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
+            
+            # combine random and recorded locations
+            wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Date", "Time"))
+            wDat <- rbind(wLocsOnly, rndmDat)
+            
+            # add to master dataframe
+            locsUA <- rbind(locsUA, wDat)
+
+          }
+
+                   
+          # export wolf locs to use in analysis
+          write.csv(locsUA, file = "wolfLocs-UsedAvail.csv", row.names = F)
+          
+          
+          
+         
+        
+          
+    ##### to figure out why some packs are different between data sources ####
+        
+          
+        # pack assignments from capture
+        wolfDatCap <- wolfFmt
+        wolfDatCap$capDate <- as.character(wolfDatCap$capDate)
+        wolfDatCap$yrMetadat = substr(wolfDatCap$capDate, nchar(wolfDatCap$capDate)-3, nchar(wolfDatCap$capDate))
+        
+        # pack assignments from gps collar data file
+        wolfDatHist <- gpsLl@data %>%
+          dplyr::select(Wolf, Pack, Year) %>%
+          distinct() %>%
+          rename(wolf = Wolf, packHistDat = Pack, yrHistDat = Year)
+        
+        # identify non-matching pack assignments
+        packFix <- wolfDatCap %>%
+          left_join(wolfDatHist) %>%
+          filter(!is.na(packHistDat)) %>%
+          filter(!is.na(packCap)) %>%
+          filter(packHistDat != packCap) 
+        
+        # investigate me  
+        write.csv(packFix, file = "../Data/Wolf/wolfPackDiscrepancies.csv", row.names = FALSE)
+                
+        
+        
+
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### #
+####   | MISC SPATIAL DATAWORK |  ####
+### ### ### ### ### ### #
+        
+        
+    ## challenge: measuring distance to structure takes for fucking ever and kills rstudio ####
+        
+        ## potential solutions:
+          # combine all structures into one polygon? is that a thing?
+          # um..... use greg's old computer
+        
+        # can't see how to reduce size
+        # is it smaller as just sptialpolygons?
+        strucSp <- SpatialPolygons(strucUTM@polygons)
+        # i feel like that's not gonna help
+        
+        # union?
+        ids <- rep("1", times = length(strucUTM))
+        test <- unionSpatialPolygons(SpatialPolygons(strucUTM@polygons), ids)
+        plot(test)
+        
+        # oh also should crop it more
+        
+        # cropped to slightly-buffered extent of wolf locs
+        strucCrop <- crop(test, extent(locsUTM) + 100)
+        plot(strucCrop)
+        
+        
+        
+    #### NAs in distance to prey ####
+        
+        z <- distDat[which(is.na(distDat$distPrey)), ]
+        zsp <- SpatialPointsDataFrame(data.frame("x" = z$X, "y" = z$Y), z, proj4string = utm)
+         
+    #### close to feedgrounds but far from elk?!? ####
+        
+      z <- distDat[which(distDat$distFeed == 0 & distDat$distPrey > 0), ]
+      unique(z$Year) # happens 10 times in just 2 yrs - 2010 & 2018
+      
+      # 2010
+      plot(preyUTM[preyUTM$id == 2010, ])
+      plot(feedUTM, add = T, col = "red")
+      plot(zsp[zsp$Year == 2010, ], add = T, col = "blue")
+      # ok this is due to fish ck feedground not being quite inside the elk distn this yr
+      
+      # 2018
+      plot(preyUTM[preyUTM$id == 2018, ])
+      plot(feedUTM, add = T, col = "red")
+      plot(zsp[zsp$Year == 2018, ], add = T, col = "blue")
+      # ohhh and this is because there were "no" elk up the gv in 2018
+      
+      # check things out in arc, maybe these numbers got mapped wrong?
+      writeOGR(zsp, dsn = paste0(datDir, "/Wolf"), layer = "zDeleteMe",
+               driver = "ESRI Shapefile", overwrite_layer = TRUE)
+            
+    
+    
+    
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### 
+####  | PRELIM DATA VIZ  |  ####
+### ### ### ### ### ### ### ### ### ###     
+    
+    ## prob move to separate file later 
+    ## but i'm too fucking excited not to look at this real quick
+    library(ggplot2)
+    ggplot(data = modDat, aes(group = Used, y = distRd)) + geom_boxplot()
+    ggplot(data = modDat, aes(group = Used, y = distFeed)) + geom_boxplot()
+    ggplot(data = modDat, aes(group = Used, y = elev)) + geom_boxplot()
+    ggplot(data = modDat, aes(group = Used, y = distPrey)) + geom_boxplot()
+    ggplot(data = modDat, aes(group = Used, y = can)) + geom_boxplot()
+    ggplot(data = modDat, aes(group = Used, y = SWE)) + geom_boxplot()
+    # hahaha none of these look different
+    # which means either i fucked something up in the data (likely)
+    # or i fucked something up in the visuals (also likely)
+    # or wolves aren't terribly selective (possible?)
+    ggplot(data = modDat, aes(group = Used, y = distRd)) + geom_histogram()
+    
+    
+    #### do something like this but with proportion of points rather than count
+    table(modDat$Used, modDat$lcClass)
+    
+    
+    
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### 
+####  | SPATIAL DATA FIXES FROM RAW  |  ####
+### ### ### ### ### ### ### ### ### ###    
+    
+    
+    
+    
+    #### landcover NAs ####
+    
+    
+    z <- modDat[is.na(modDat$lcClass),]
+    zsp <- SpatialPoints(coords = data.frame(z$X, z$Y), proj4string = utm)
+    zz <- raster(paste0(datDir, "/xProcessedRasters/slope.tif"))
+    plot(zz)
+    plot(z, add = T, col = "blue")
+    
+    # there aren't nas in the landcover values themselves
+    # but many of them are decimals which doesn't allow them to map to classification
+    
+    # stepping thru lc parts of spatial data prep code to where where i effed up the raster
+    
+    # cropped version of raw file
+    unique(lcPrelim) # these are just integers, thank god - so raw file is good
+    
+    # reprojected into utms
+    unique(lcUTM) # ooook this is where it gets fucked
+    # because of the reprojection, duh
+    # let's try to figure out if rounding would make sense or not
+    # but use the smaller cropped file
+    
+    # i guess if not you'll have to use the location latlongs to pull these values from the original aea file
+    
+    
+    # cropped utms
+    z <- data.frame(l = unique(lcCrop))
+    z$lRnd = round(z$l, 0)
+    unique(z$lRnd)
+    unique(lcLegendRaw$Value)
+    # hahaha yeah nope, rounding isn't gonna work
+    # so need to deal with landcover separately
+    
+    # which makes me think i should consider dealing with other rasters in their original projections as well
+    
+    # so. new plan for the day. 
+    
+    # look at each raster and decide whether you need to use its original projection
+    
+    # find the most common projection (aea i think) and translate the wolf locations into that for extraction
+    # stack all possible but don't stress it if that doesn't make sense with how the data work
+    
+    
+#### remove aea from rater names
+    
+    z <- names(rast)
+    zz <- substr(z, 0, 1)
+    zz
+    zz <- substr(z, 4, nchar(z))
+    zz
+    
