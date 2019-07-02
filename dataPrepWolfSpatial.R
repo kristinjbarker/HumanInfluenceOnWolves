@@ -133,6 +133,10 @@
       
       # landcover (maps number to type)
       lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv")) 
+      
+      # recreational access
+      recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
+      recLegendRaw <- recRaw@data
 
    
     
@@ -298,9 +302,9 @@
       dplyr::select(staAbbv, elevM) %>%
       distinct()
      
-    ## format snow data (date as such)   
+    ## format snow data (date as date; swe as decimeter)   
     snow <- snowRaw %>%
-      mutate(Date = ymd(Date))
+      mutate(Date = ymd(Date), swe = SWE*0.254)
 
     ## create new dataframe to combine snow values with extracted raster values
     extSnow <- ext %>%
@@ -318,7 +322,7 @@
       iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
       
       # find value for that site and date
-      iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "SWE"]
+      iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "swe"]
       
       # add the value to the dataframe
       extSnow[i, "swe"] <- iSWE
@@ -358,23 +362,71 @@
 
         # add landcover classification info to model data
         modDat <- left_join(modDatRaw, lcTypes, by = c("lc" = "lcVal"))
+        
+
+        
+        
+    #### map recreation values to access type ####        
+        
+    
+        # format and rename recreation classification info
+        recTypes <- recLegendRaw %>%
+          rename(mapCol = MapColor, sled = Over_Snow_, nonmoto = Non_Motori) %>%
+          dplyr::select(mapCol, sled, nonmoto)
+        
+        # map factor levels to access type
+        recTypes$recNum <- ifelse(
+          recTypes$mapCol == "Blue", 3, 
+          ifelse(recTypes$mapCol == "Light Purple", 2, 1))
+        recTypes$recClass = ifelse(
+          recTypes$recNum == 3, "AllOT",
+          ifelse(recTypes$recNum == 2, "NoSledOT", "NoOT"))
+    
+        # add recreation classification info to model data
+        modDat <- left_join(modDat, recTypes, by = c("rec" = "recNum"))        
+        
+        
+        
+    #### add hunting indicator ####
+        
+        # format year as number
+        modDat$Year <- as.integer(modDat$Year)
+        
+        # wy hunts occurred 2012-2013, 2017 on
+        modDat$hunt <- ifelse(modDat$Year == 2012 | modDat$Year == 2013 | 
+                              modDat$Year >= 2017, 1, 0)
+        
+    
+    #### format aspect ####
+        
+        # translate to northness (continuous and binary) and make 0 if slope = 0
+        modDat$northness <- cos(modDat$asp)
+        modDat$northness <- ifelse(modDat$slope == 0, 0, modDat$northness)
+        modDat$north <- ifelse(modDat$northness > 0, 1, 0)
+        
+        # translate to eastness (continuous and binary) and make 0 if slope = 0
+        modDat$eastness <- sin(modDat$asp)
+        modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
+        modDat$east <- ifelse(modDat$eastness > 0, 1, 0)
+        
+        # if slope = 0, set aspect(s) to 0
+        modDat$northness <- ifelse(modDat$slope == 0, 0, modDat$northness)
+        modDat$north <- ifelse(modDat$slope == 0, 0, modDat$north)
+        modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
+        modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
 
         
         
         
-        
-        #### ~~ KRISTIN YOU LEFT OFF HERE ~~ ####        
-    
+    #### add dates of active feeding on feedgrounds ####     
         
         
+        ## only if you can get GV dates ##
         
-    #### map rec access values to restrictions ####
+        ## refuge dates are in /elk/joes master data (feeedstart and feedend)
+        
 
         
-        # you can pull these values from the rec data, but not positive if it's read in here or not
-        
-    
-    #### translate aspect to something more usable? maybe ask owen about this ####
         
         
         
@@ -394,3 +446,8 @@
                  layer = "humanInfl-modDat",
                  driver = "ESRI Shapefile",
                  overwrite_layer = TRUE)
+
+        
+ save.image(file = "modDat.RData")
+        
+ 
