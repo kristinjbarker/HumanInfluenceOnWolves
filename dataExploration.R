@@ -19,8 +19,18 @@
   
   #### Set working directory and filepath to spatial data ####
 
-      setwd("C:\\Users\\Kristin\\Box Sync\\Documents\\HumanInfluenceOnWolves")
-      datDir <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data"
+
+#### Set working directory, identify correct google database, and run correct cluster prep code ####
+
+wd_kjb <- "C:\\Users\\Kristin\\Box Sync\\Documents\\HumanInfluenceOnWolves"
+wd_greg <- "C:\\Users\\krist\\Documents\\HumanInfluenceOnWolves"
+
+if (file.exists(wd_kjb)) { setwd(wd_kjb); datName <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data"
+} else {
+  setwd(wd_greg); datName <- "C:\\Users\\krist\\Documents\\Data"
+}
+rm(wd_kjb, wd_greg)
+
 
   
 
@@ -35,6 +45,7 @@
       #"rgeos",         ## gDistance and other spatial work
       #"sp",            ## spatial work
       #"sf",            ## spatial work like the kids are doing it these days
+      "lme4",           ## regression models
       "ggplot2",        ## totes adorbs plots
       "gridExtra",      ## arrange multiple plots
       "cowplot",        ## samesies
@@ -134,7 +145,18 @@
     #### kristin you set aspects = 0  separately
     # by just writing those lines in wolfspatial and running only those lines
     #### will need to rerun wolfspatialprep at some point
+    ## this is the code
     
+    #
+    # if slope = 0, set aspect(s) to 0
+    modDat$northness <- ifelse(modDat$slope == 0, 0, modDat$northness)
+    modDat$north <- ifelse(modDat$slope == 0, 0, modDat$north)
+    modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
+    modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
+
+
+
+
     
   #### ~ Environment ~ ####
     
@@ -244,8 +266,7 @@
                  day = ifelse(hr >= 8 & hr <= 17, 1, 0))
         
         ## diff models for night and day first, bc interacting everything would suck
-        
-        library(lme4)
+
         
         modDay <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
                           I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
