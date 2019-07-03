@@ -224,4 +224,36 @@
         # https://bioinfo.iric.ca/introduction-to-cowplot/
         # https://stackoverflow.com/questions/14818529/plot-histograms-over-factor-variables
         
+ 
+        
+                   
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### #
+####   | PRELIM GLOBAL MODEL |  ####
+### ### ### ### ### ### ### ### ### ### #
+        
+        
+        ## i can't stand it i have to know right the fuck right now
+        
+        dat <- modDat %>%
+          mutate(hr = hour(datetime),
+                 # define daylight as 8a-5p
+                 day = ifelse(hr >= 8 & hr <= 17, 1, 0))
+        
+        ## diff models for night and day first, bc interacting everything would suck
+        
+        library(lme4)
+        
+        modDay <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
+                          I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
+                        data = filter(dat, day == 1),
+                        family = binomial(logit))
+        
+        modNight <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
+                          I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
+                        data = filter(dat, day == 0),
+                        family = binomial(logit))        
         
