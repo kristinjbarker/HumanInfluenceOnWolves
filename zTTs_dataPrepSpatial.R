@@ -1885,11 +1885,77 @@
     # stack all possible but don't stress it if that doesn't make sense with how the data work
     
     
-#### remove aea from rater names
+#### remove aea from raster names ####
     
     z <- names(rast)
     zz <- substr(z, 0, 1)
     zz
     zz <- substr(z, 4, nchar(z))
     zz
+    
+    
+    
+#### fix mapping of recreation (you got factor levels not data) ####    
+    
+    z <- raster(paste0(datDir, "/xProcessedRasters/AEArec.tif"))
+    plot(z)
+    z@data
+    z@legend
+    # lost data when rasterized
+    # gonna quick-fix for now by visually matching factor levels with correct zone
+    # checking in arc...
+    # 3 = Blue (anything goes)
+    # 2 = "Light Purple" (no snowmobiles off-trail)
+    # 1 = "Dark Purple" (no off-trail recreation - winter closure)
+    
+    
+    
+    
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### 
+####  | DATA VIZ  |  ####
+### ### ### ### ### ### ### ### ### ###    
+    
+    
+    #### plotting frequency of categorical covariates (eg lc) ####
+    
+        
+        pL <- ggplot(z, aes(x = lcClass, y = prop, fill = Used), 
+                     stat = "identity", position = "dodge")
+        pL
+    
+    
+        
+        pL <- a + geom_histogram(aes(lc, y = ..count../sum(..count..),
+                                     fill = Used), position = "dodge")
+        pL
+        
+        pL <- a + geom_histogram(aes(lcType, fill = Used), position = "dodge")
+        pL
+          
+        grid.arrange(pC, pL)
+        
+        
+    #### misc prelim plots ####    
+        
+        hist(modDat[modDat$Used == 1, "lc"])
+        hist(modDat[modDat$Used == 0, "lc"])
+        
+        freq(modDat[modDat$Used == 1, "can"])
+        hist(modDat[modDat$Used == 0, "lc"])
+        
+        
+        library(cowplot)
+        plot_grid(pC, pN, pE, pS, pR, pW, pL, ncol = 4, rel_widths = c(1, 1, 1, 1, 2))
+        
+        pA <- plot_grid(pC, pN, pE, pS, pR, pW, ncol = 2)
+        pB <- plot_grid(pA, pL, rel_widths = c(1, 2))
+        pB
+        
+        plot_grid(pA, pL, nrow = 2, rel_heights = c(0.75, 0.25))
+        
+    
+    
     
