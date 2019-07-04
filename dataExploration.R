@@ -131,7 +131,30 @@ rm(wd_kjb, wd_greg)
     # save.image("correlationsEnvt.RData")
     # 
     # 
+
+    #### check correlations between human covariates ####
+
+    dat.cor.h <- modDat %>%
+      dplyr::select(distRd, distFeed, distStruc, recClass)
+
+    source("pairs-panels.R")
+    pairs.panels(dat.cor.h)
+
+    save.image("correlationsHuman.RData")
+
+
     
+    # #### check correlations between "top" environmental covariates and human covariates ####
+    # 
+    # dat.cor <- modDat %>%
+    #   dplyr::select(can, elev, lc, rug, slope, swe, northness)
+    # 
+    # source("pairs-panels.R")    
+    # pairs.panels(dat.cor)
+    # 
+    # save.image("correlationsEnvt.RData")
+    # 
+    # 
     
 ################################################################################################## #  
   
@@ -247,7 +270,90 @@ rm(wd_kjb, wd_greg)
         # https://stackoverflow.com/questions/14818529/plot-histograms-over-factor-variables
         
  
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### ### ### ### ##
+####   | UNIVARIATE DISTRIBUTIONS BY DAY/NIGHT |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ##
         
+        
+        ## add day/night indicator
+        dat <- modDat %>%
+          mutate(hr = hour(datetime),
+                 # define daylight as 8a-5p
+                 day = ifelse(hr >= 8 & hr <= 17, "day", "night"),
+                 Used = ifelse(Used == 0, "Available", "Used"))     
+        
+        
+        ## base
+        b <- ggplot(dat, aes(colour = day, fill = day)) + facet_grid(~ Used)
+        
+        
+        ## human covariates
+        
+            # rd
+            pr2 <- b + geom_density(aes(distRd), alpha = 0.2, size = 1) 
+            pr2
+            
+            # bldg
+            pb2 <- b + geom_density(aes(distStruc), alpha = 0.2, size = 1) 
+            pb2        
+            
+            # feed
+            pf2 <- b + geom_density(aes(distFeed), alpha = 0.2, size = 1) 
+            pf2
+            
+            # rec
+            ppnRec <- ddply(dat[!is.na(dat$recClass), ], .(Used, day), summarise,
+                           prop = prop.table(table(recClass)),
+                           recClass = names(table(recClass)))
+            prec2 <- ggplot(ppnRec, aes(recClass, fill = day)) +
+              geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
+              facet_grid(~ Used)
+            prec2     
+            
+            # all together
+            grid.arrange(pr2, pb2, pf2, prec2, ncol = 2)
+        
+        
+        ## environmental covariates
+            
+            # canopy
+            pc2 <- b + geom_density(aes(can), alpha = 0.2, size = 1)
+            pc2
+            
+            # aspect
+            pn2 <- b + geom_density(aes(northness), alpha = 0.2, size = 1)
+            pn2
+            
+            # elev
+            pe2 <- b + geom_density(aes(elev), alpha = 0.2, size = 1)
+            pe2
+            
+            # slope
+            ps2 <- b + geom_density(aes(slope), alpha = 0.2, size = 1)
+            ps2
+            
+            # snow
+            pw2 <- b + geom_density(aes(swe), alpha = 0.2, size = 1)
+            pw2
+            
+            # landcover
+            ppnLc2 <- ddply(dat, .(Used, day), summarise,
+                            prop = prop.table(table(lcClass)),
+                            lcClass = names(table(lcClass)))
+            pl2 <- ggplot(ppnLc2, aes(lcClass, fill = day)) +
+              geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
+              facet_grid(~ Used) 
+            pl2
+            
+            # all together
+            pa2 <- plot_grid(pc2, pn2, pe2, ps2, pr2, pw2, ncol = 2)
+            plot_grid(pa2, pl2, nrow = 2, rel_heights = c(0.75, 0.25))
+
+
                    
 ################################################################################################## #  
   
@@ -256,14 +362,8 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### #
 ####   | PRELIM GLOBAL MODEL |  ####
 ### ### ### ### ### ### ### ### ### ### #
-        
-        
-        ## i can't stand it i have to know right the fuck right now
-        
-        dat <- modDat %>%
-          mutate(hr = hour(datetime),
-                 # define daylight as 8a-5p
-                 day = ifelse(hr >= 8 & hr <= 17, 1, 0))
+
+
         
         ## diff models for night and day first, bc interacting everything would suck
 
