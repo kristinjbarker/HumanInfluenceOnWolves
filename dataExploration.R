@@ -279,12 +279,9 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ### ##
         
         
-        ## add day/night indicator
+        ## use words instead of numbers for used/avail
         dat <- modDat %>%
-          mutate(hr = hour(datetime),
-                 # define daylight as 8a-5p
-                 day = ifelse(hr >= 8 & hr <= 17, "day", "night"),
-                 Used = ifelse(Used == 0, "Available", "Used"))     
+          mutate(Used = ifelse(Used == 0, "Available", "Used"))     
         
         
         ## base
