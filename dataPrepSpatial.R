@@ -146,6 +146,14 @@
     
     #### Combine and export ####
      
+      # export landCov as shp also (to keep classified values, hopefully)
+      lcSp <- SpatialPolygonsDataFrame(lcCrop)
+      writeOGR(lcCrop, paste0(datDir, "/Land/LandcoverType"),
+                 layer = "lcType_cropped",
+                 driver = "ESRI Shapefile",
+                 overwrite_layer = TRUE)
+      
+      
       # stack
       rastStk <- stack(can, elev, asp, rug, slope, lcCrop, rec)
       names(rastStk) <- c("can", "elev", "asp", "rug", "slope", "lc", "rec")
