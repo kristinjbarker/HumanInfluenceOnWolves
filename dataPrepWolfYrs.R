@@ -61,6 +61,11 @@
     aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
     
  
+  #### Make code reproducible ####
+    
+    set.seed(42)
+    
+    
 
 ################################################################################################## #  
   
@@ -130,7 +135,13 @@
             # remove daylight savings NAs (figure out a more refined way to handle this later)
             filter(!is.na(datetime)) %>%
             # only use winter locations
-            filter(Month <= 3) 
+            filter(Month <= 3) %>%
+            # add day/night indicator
+            mutate(daytime = ifelse(hour(datetime) >= 8 & hour(datetime) <= 18, "day", "night")) %>%
+            # order columns to match later dataframes for joins
+            dplyr::select("Wolf", "Pack", "datetime", "Date", "daytime",
+                              "Time", "Month", "Day", "Year",
+                              "X", "Y", "Latitude", "Longitude", "wolfYr")
           any(is.na(allHist)) # verify no wonky datetimes
 
         
@@ -198,21 +209,21 @@
           for(j in 1:length(iFiles)) {
             
             # read in collar data (and deal with telonics' awkward headers)
-            iDat <- read.csv(iFiles[j], header = FALSE, stringsAsFactors = FALSE, col.names = 1:25)  
+            iDatA <- read.csv(iFiles[j], header = FALSE, stringsAsFactors = FALSE, col.names = 1:25)  
             
             # remove awkward headers and trailing NA column
-            colnames(iDat) <- unlist(iDat[which(iDat[ ,1] == "Acquisition Time"), ])
-            iDat <- iDat[-c(1:which(iDat[ ,1] == "Acquisition Time")), ]
-            iDat <- iDat[!is.na(names(iDat))]
+            colnames(iDatA) <- unlist(iDatA[which(iDatA[ ,1] == "Acquisition Time"), ])
+            iDatA <- iDatA[-c(1:which(iDatA[ ,1] == "Acquisition Time")), ]
+            iDatA <- iDatA[!is.na(names(iDatA))]
             
             # remove unsuccessful locations
-            iDat <- iDat[grepl(pattern = "Succe.", x = iDat$'GPS Fix Attempt'), ]
+            iDatA <- iDatA[grepl(pattern = "Succe.", x = iDatA$'GPS Fix Attempt'), ]
             
             # if no successful locations recorded, move on
-            if(nrow(iDat) == 0) { next }
+            if(nrow(iDatA) == 0) { next }
             
             # start renaming columns to match historic data format
-            iDat <- iDat %>%
+            iDatA <- iDatA %>%
               rename(datetime = 'Acquisition Time',
                      Latitude = 'GPS Latitude',
                      Longitude = 'GPS Longitude') %>%
@@ -225,56 +236,66 @@
                      Longitude = as.numeric(Longitude)) 
             
             # record dates and times in local time
-            attributes(iDat$datetime)$tzone <- "America/Denver"
-            iDat <- iDat %>%
+            attributes(iDatA$datetime)$tzone <- "America/Denver"
+            iDatA <- iDatA %>%
               mutate(Date = substr(datetime, 1, 11),
                      Time = substr(datetime, 12, 19),
                      Month = month(datetime),
                      Day = day(datetime),
-                     Year = year(datetime))
-            iDat$Date <- as.Date(iDat$Date)
+                     Year = year(datetime),
+                     Hour = hour(datetime)) 
+            
+            # identify day vs nighttime locations
+            iDatA$daytime = ifelse(iDatA$Hour >= 8 & iDatA$Hour <= 18, "day", "night")
+
+            # format date
+            iDatA$Date <- as.Date(iDatA$Date)
             
             # remove pre-deployment and post-transmission-end locations
-            iDat <- filter(iDat, Date >= iStart & Date < iEnd)
+            iDatA <- filter(iDatA, Date >= iStart & Date < iEnd)
             
-            # remove daylight savings NAs
-            iDat <- filter(iDat, !is.na(datetime))
-            
-            # only use winter locations (jan-mar to align with cluster data) 
-            iDat <- filter(iDat, Month <= 3)
+            # final location subsets:
+            iDatA <- iDatA %>%
+              # remove daylight savings NAs
+              filter(!is.na(datetime)) %>%
+              # only use winter locations (jan-mar to align with cluster data) 
+              filter(Month <= 3) %>%
+              # randomly select 2 locations per day (one during day, one during night)
+              group_by(Date, daytime) %>%
+              sample_n(1) %>%
+              ungroup()  
 
             # if no remaining locations, move on
-            if(nrow(iDat) == 0) { next }
+            if(nrow(iDatA) == 0) { next }
             
             # order and format columns
-            iDat <- iDat %>%
-              dplyr::select(c("Wolf", "Pack", "datetime", "Date", 
-                              "Time", "Month", "Day", "Year",
-                              "X", "Y", "Latitude", "Longitude")) %>%
-              mutate(wolfYr = paste(Wolf, Year, sep = "-"))
+            iDatA <- iDatA %>%
+              mutate(wolfYr = paste(Wolf, Year, sep = "-")) %>%
+              dplyr::select(names(locsHist)) 
             
             # remove wolfYrs already included in jen's cleaned data
-            iDat <- anti_join(iDat, wolfYrsHist, by = "wolfYr")
-            iDat <- droplevels(iDat)
+            iDatA <- anti_join(iDatA, wolfYrsHist, by = "wolfYr")
+            iDatA <- droplevels(iDatA)
+            
             
             # if no remaining locations, move on
-            if(nrow(iDat) == 0) { next }            
+            if(nrow(iDatA) == 0) { next }            
  
             # make it spatial
             iSp <- SpatialPointsDataFrame(
-              data.frame("x" = as.numeric(iDat$Longitude), "y" = as.numeric(iDat$Latitude)),
-              iDat, proj4string = ll)
+              data.frame("x" = as.numeric(iDatA$Longitude), "y" = as.numeric(iDatA$Latitude)),
+              iDatA, proj4string = ll)
             
             # convert lat/longs to correct utms (utm zones differed in raw files)
             iUTM <- spTransform(iSp, utm)
             
             # add correct utms to data 
-            iDat$X <- iUTM@coords[ , "x"]
-            iDat$Y <- iUTM@coords[ , "y"]
+            iDatA$X <- iUTM@coords[ , "x"]
+            iDatA$Y <- iUTM@coords[ , "y"]
             
             
             # combine with other data for that wolf
-            iOut <- rbind(iOut, iDat)
+            iOut <- rbind(iOut, iDatA)
             
             # remove duplicates
             iOut <- distinct(iOut)
@@ -325,7 +346,7 @@
               # format date and time info
               mutate(datetime = ymd_hms(TelemDate, tz = "America/Denver")) %>%
               # remove daylight savings NAs
-              filter(is.na(datetime)) %>%
+              filter(!is.na(datetime)) %>%
               # split daytime into relevant components
               mutate(Date = substr(datetime, 1, 11),
                      Time = substr(datetime, 12, 19),
@@ -336,9 +357,9 @@
               # only use winter locations
               filter(Month <= 3) %>%
               # identify day vs nighttime locations
-              mutate(daytime = ifelse(Hour >= 8 & Hour <= 18, "day", "night"))
+              mutate(daytime = ifelse(Hour >= 8 & Hour <= 18, "day", "night")) %>%
               # randomly select 2 locations per day (one during day, one during night)
-              group_by(wolfYr, Day, daytime) %>%
+              group_by(Wolf, Day, daytime) %>%
               sample_n(1) %>%
               ungroup()  
             # finalize date format
@@ -376,11 +397,10 @@
 
             # format to match master dataframe
             iDat <- iDat %>%
-              mutate(Pack = iPack) %>%
-              dplyr::select("Wolf", "Pack", "datetime", "Date", 
-                            "Time", "Month", "Day", "Year", "daytime",
-                            "X", "Y", "Latitude", "Longitude") %>%
-              mutate(wolfYr = paste(Wolf, Year, sep = "-"))
+              mutate(
+                Pack = iPack,
+                wolfYr = paste(Wolf, Year, sep = "-")) %>%
+              dplyr::select(names(locsHist)) 
 
           
           # add to master dataframe
@@ -491,8 +511,8 @@
             
             
             # create blank df to store results in
-            locsA <- data.frame(matrix(NA, nrow = 0, ncol = 6))
-            colnames(locsA) <- c("X", "Y", "Used", "wolfYr", "Date", "Time")  
+            locsA <- data.frame(matrix(NA, nrow = 0, ncol = 7))
+            colnames(locsA) <- c("X", "Y", "Used", "wolfYr", "Date", "Time", "daytime")  
             
             
             # for each individual...
@@ -528,13 +548,14 @@
               rndmDat$wolfYr <- w
               rndmDat$Wolf <- wWolf
               rndmDat$Pack <- wPack
-              
+
               # randomly assign dates and times from those in recorded locations
               rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
               rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
-              
+              rndmDat$daytime <- ifelse(as.numeric(substr(rndmDat$Time, 1, 2)) >= 8 & as.numeric(substr(rndmDat$Time, 1, 2)) <= 18, "day", "night")
+                            
               # combine random and recorded locations
-              wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Wolf", "Pack", "Date", "Time"))
+              wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Wolf", "Pack", "Date", "Time", "daytime"))
               wDat <- rbind(wLocsOnly, rndmDat)
               
               # add to master dataframe
@@ -567,7 +588,7 @@
                    Day = day(Date),
                    Year = year(Date)) %>%
             # order columns
-            dplyr::select(c("Wolf", "Pack", "datetime", "Date", 
+            dplyr::select(c("Wolf", "Pack", "datetime", "Date", "daytime",
                             "Time", "Month", "Day", "Year",
                             "X", "Y", "Latitude", "Longitude", 
                             "Used", "wolfYr"))           
