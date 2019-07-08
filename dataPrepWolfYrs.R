@@ -305,8 +305,7 @@
 ####   | FORMAT WINTER 2019 DATA |  ####
 ### ### ### ### ###  ### ### ### ### ###
 
-        
-        
+
         #### format data before looping through each individual ####
         
             # fix that wolfID...
@@ -325,18 +324,29 @@
                      Longitude = Long) %>%
               # format date and time info
               mutate(datetime = ymd_hms(TelemDate, tz = "America/Denver")) %>%
+              # remove daylight savings NAs
+              filter(is.na(datetime)) %>%
+              # split daytime into relevant components
               mutate(Date = substr(datetime, 1, 11),
                      Time = substr(datetime, 12, 19),
                      Month = month(datetime),
                      Day = day(datetime),
-                     Year = year(datetime)) %>%
+                     Year = year(datetime),
+                     Hour = hour(datetime)) %>%
               # only use winter locations
-              filter(Month <= 3)
-            # final date formatting fixes
+              filter(Month <= 3) %>%
+              # identify day vs nighttime locations
+              mutate(daytime = ifelse(Hour >= 8 & Hour <= 18, "day", "night"))
+              # randomly select 2 locations per day (one during day, one during night)
+              group_by(wolfYr, Day, daytime) %>%
+              sample_n(1) %>%
+              ungroup()  
+            # finalize date format
             locsMe$Date <- as.Date(locsMe$Date)
-            locsMe <- filter(locsMe, !is.na(datetime))
+            # remove any stored factor levels
             locsMe <- droplevels(locsMe)
-            any(is.na(locsMe$datetime))
+            # sanity check, should print F
+            any(is.na(locsMe$datetime)) 
 
             
        
@@ -368,7 +378,7 @@
             iDat <- iDat %>%
               mutate(Pack = iPack) %>%
               dplyr::select("Wolf", "Pack", "datetime", "Date", 
-                            "Time", "Month", "Day", "Year",
+                            "Time", "Month", "Day", "Year", "daytime",
                             "X", "Y", "Latitude", "Longitude") %>%
               mutate(wolfYr = paste(Wolf, Year, sep = "-"))
 
