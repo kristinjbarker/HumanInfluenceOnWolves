@@ -302,9 +302,9 @@
       dplyr::select(staAbbv, elevM) %>%
       distinct()
      
-    ## format snow data (date as date; swe as decimeter)   
+    ## format snow data (date as date; swe as meters not inches)   
     snow <- snowRaw %>%
-      mutate(Date = ymd(Date), swe = SWE*0.254)
+      mutate(Date = ymd(Date), swe = SWE*0.0254)
 
     ## create new dataframe to combine snow values with extracted raster values
     extSnow <- ext %>%
@@ -346,7 +346,7 @@
       modDatRaw <- distDat %>%
         dplyr::select(c(rowNum, distRd, distFeed, distStruc, distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
-        dplyr::select(c(wolfYr, Wolf, Pack, Used, 
+        dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, swe, 
                         distRd, distFeed, distStruc, distPrey, 
                         datetime, Date, Time, Month, Day, Year,
@@ -415,8 +415,6 @@
         modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
         modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
 
-        
-        
         
     #### add dates of active feeding on feedgrounds ####     
         
