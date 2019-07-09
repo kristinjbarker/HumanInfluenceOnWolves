@@ -360,9 +360,21 @@ rm(wd_kjb, wd_greg)
 ####   | PRELIM GLOBAL MODEL |  ####
 ### ### ### ### ### ### ### ### ### ### #
 
+            ## testrun - does this run while computer is locked?
+            z <- glm(Used ~ 1 + northness, data = dayDat, family = binomial(logit))
+            zz <- lmer(Used ~ 1 + northness + (wolfYr | Pack), data = modDat)
+            
+            ## yes but your response isn't numeric knucklehead
+            
+            
+            
+            ## to simplify model - filter data in advance
+            dayDat <- filter(modDat, day == 1)
+            nightDat <- filter(modDat, day == 0)
+            
 
-        
-        ## diff models for night and day first, bc interacting everything would suck
+            
+            
 
         
         modDay <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
