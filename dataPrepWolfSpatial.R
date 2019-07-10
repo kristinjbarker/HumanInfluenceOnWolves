@@ -34,6 +34,7 @@
       "rgeos",         ## gDistance and other spatial work
       "sp",            ## spatial work
       "sf",            ## spatial work like the kids are doing it these days
+      "beepr",         ## notify when chunk complete
       "lubridate",     ## manipulate datetime data inside dplyr pipes
       "dplyr")         ## data manipulation and general awesomeness
     
@@ -105,7 +106,7 @@
       names(rast) <- substr(names(rast), 4, nchar(names(rast)))
     
       # snow (snow water equivalence from snotel sites in study area)
-      snowRaw <- read.csv(paste0(datDir, "/Environment/swe2019.csv"))
+      snowRaw <- read.csv(paste0(datDir, "/Environment/snowDat_2005-2019.csv"))
     
       
     
@@ -289,8 +290,7 @@
           left_join(distFeed, by = "rowNum") %>%
           left_join(distStruc, by = "rowNum") # %>%
           # left_join(distPrey, by = "rowNum")
-
-    
+   
 
 ################################################################################################## #  
   
@@ -300,20 +300,20 @@
 ### ### ### ### ### ### #
         
         
-    ## based on elevation of point, closest elevation of SWE station, and date
+    ## based on elevation of point, closest elevation of snotel station, and date
 
     ## identify snotel stations and their elevations
     stations <- snowRaw %>%
       dplyr::select(staAbbv, elevM) %>%
       distinct()
      
-    ## format snow data (date as date; swe as meters not inches)   
+    ## format snow data (date as date)   
     snow <- snowRaw %>%
-      mutate(Date = ymd(Date), swe = SWE*0.0254)
+      mutate(Date = ymd(Date))
 
     ## create new dataframe to combine snow values with extracted raster values
     extSnow <- ext %>%
-      mutate(swe = NA, rowNum = rownames(ext))
+      mutate(snowCm = NA, rowNum = rownames(ext))
 
     
     ## for each used & available wolf location   
@@ -326,15 +326,18 @@
       # find the snotel site closest in elevation
       iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
       
+      # if prior to XXXX and closest snotel site was granite, use gros ventre instead (next closest in elev) 
+      iStaUpd <- ifelse(iSta == "gc" & iDate <= "2013-01-01", "gv", paste(iSta))
+      
       # find value for that site and date
-      iSWE <- snow[which(snow$staAbbv == iSta & snow$Date == iDate), "swe"]
+      iSnow <- snow[which(snow$staAbbv == iStaUpd & snow$Date == iDate), "snowCm"]
       
       # add the value to the dataframe
-      extSnow[i, "swe"] <- iSWE
+      extSnow[i, "snowCm"] <- iSnow
       
     }
 
-    
+ 
 
 ################################################################################################## #  
   
@@ -352,7 +355,7 @@
         dplyr::select(c(rowNum, distRd, distFeed, activeFeed, distStruc)) %>% # , distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
-                        asp, can, elev, lc, rec, rug, slope, swe, 
+                        asp, can, elev, lc, rec, rug, slope, snowCm, 
                         distRd, distFeed, activeFeed, distStruc, # distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum))
