@@ -59,39 +59,26 @@
      
    #### Read in raw  data ####
     
-    rawGC <- read.delim(paste0(datDir, "/Environment/SNOTEL/GraniteCreekTbl.txt"))
-    rawGV <- read.delim(paste0(datDir, "/Environment/SNOTEL/GrosVentreSummitTbl.txt"))
-    rawTG <- read.delim(paste0(datDir, "/Environment/SNOTEL/TogwoteePassTbl.txt"))
+    snowRaw <- read.delim(
+      paste0(datDir, "/Environment/SNOTEL/snowDepthAndSWE_tbl.txt"),
+      header = TRUE, sep = ",")
 
+
+  #### Format ####
     
-            
-     
-   #### Format to combine ####
+    snow <- snowRaw %>%
+      mutate(Date = ymd(Date),
+        elevM = ifelse(Station.Name == "Granite Creek", 6770 * 0.3048,
+                       ifelse(Station.Name == "Gros Ventre Summit", 8750 * 0.3048, 9590 * 0.3048)),
+        staAbbv = ifelse(Station.Name == "Granite Creek", "gc", 
+                         ifelse(Station.Name == "Gros Ventre Summit", "gv", "tg"))) %>%
+      rename(station = Station.Name,
+             staID = Station.Id,
+             sweMM = Snow.Water.Equivalent..mm..Start.of.Day.Values,
+             sweDelta = Change.In.Snow.Water.Equivalent..mm.,
+             snowCm = Snow.Depth..cm..Start.of.Day.Values,
+             snowDelta = Change.In.Snow.Depth..cm.)
+
+  #### Export ####
     
-    gc <- data.frame(
-      Station = "Granite Creek",
-      staAbbv = "gc",
-      elevM = 6770*0.3048,
-      Date = ymd(substr(rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
-      SWE = as.numeric(gsub(".*(,)", "", rawGC$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
-    )
-    
-    gv <- data.frame(
-      Station = "Gros Ventre Summit",
-      staAbbv = "gv",
-      elevM = 8750*0.3048,
-      Date = ymd(substr(rawGV$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
-      SWE = as.numeric(gsub(".*(,)", "", rawGV$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
-    )
-        
-    tg <- data.frame(
-      Station = "Togwotee Pass",
-      staAbbv = "tg",
-      elevM = 9590*0.3048,
-      Date = ymd(substr(rawTG$Date.Snow.Water.Equivalent..in..Start.of.Day.Values, 1, 10)),
-      SWE = as.numeric(gsub(".*(,)", "", rawTG$Date.Snow.Water.Equivalent..in..Start.of.Day.Values))
-    )
-    
-    swe <- rbind(gc, gv, tg) %>%
-      filter(Date > "2004-01-01")
-    write.csv(swe, file = paste0(datDir, "/Environment/swe2019.csv"), row.names = F)
+    write.csv(snow, file = paste0(datDir, "/Environment/snowDat_2005-2019.csv"), row.names = F)
