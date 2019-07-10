@@ -1958,4 +1958,111 @@
         
     
     
+################################################################################################## #  
+  
     
+### ### ### ### ### ### ### ### ### ### 
+####  | TWEAKING PARAMS |  ####
+### ### ### ### ### ### ### ### ### ###     
+        
+        
+      #### landcover classes ####
+        
+        unique(modDat$lcClass)
+        length(which(modDat$lcClass == "Cultivated"))
+        length(which(modDat$lcClass == "Cultivated" & modDat$Used == 1))
+        library(raster)
+        lc <- raster(paste0(datName, "/xProcessedRasters/lc.tif"))
+        plot(lc)
+        unique(lc)
+        summary(lc)
+        
+        
+        ## do we even have medium or high intensity classes? 
+        z <- filter(modDat, lcClass == "Developed")
+        table(z$lc)
+        
+        
+      #### feedgrounds - identifying which are always active vs sometimes active ####
+        
+        names(distFeedRaw)
+        distFeedRaw[1,1]
+        distFeedRaw[1,]
+        nrow(distFeedRaw)
+        # ohhh it's the ROWS that are feedgrounds
+        distFeedRaw[,1]
+        feedAEA@data$Name
+        
+        # make sure you know which feedground corresponds to which row
+        z <- feedAEA@data
+        levels(z$Name)
+        View(z)
+        # mk Alkali = 0, Fish Ck = 2
+        
+        rownames(distFeedRaw)
+        # and the rownames are what we need to map to that
+        
+        # now how do we use apply to do that efficiently(ish)?
+        
+        
+        # i think write something like this
+multi.fun <- function(x) {
+      c(min = min(x), mean = mean(x), max = max(x))
+}        
+# but first make sure you ca identify the row,i assume which(min()) will do it
+
+zz <- apply(distFeedRaw, 2, base::which.min)
+zz[1]
+zz[2]    
+zz[3]
+zz[134]
+unique(zz)
+zz <- apply(distFeedRaw, 2, which(rownames == min(rownames)))
+zz <- apply(distFeedRaw, 2, which.min)
+
+
+    #### testing built-in function to standardize ####
+
+    z <- modDatRaw$slope
+zz <- scale(z) # this has attributes now, and is a matrix
+zz2 <- z - mean(z)/sd(z)
+zz[1,1]
+zz2[1]
+mean(z)
+sd(z)
+
+test <- modDatRaw
+test$test <- scale(test$slope)
+ncol(modDatRaw)
+mean(test$test)
+getAnywhere(scale)
+test$test2 <- test$slope - mean(test$slope)/sd(test$slope)
+View(test[, c("test", "test2")])
+mean(test$test)
+mean(test$test2)
+mean(test$slope)
+sd(test$slope)
+test$slope[1]
+0.02-0.219/0.142
+# ok i dn't know what this scale thing is but it's not what i thought
+
+test$test3 <- scale(test$slope, scale = F)
+View(test[, c("slope", "test", "test2", "test3")])
+
+# ok test3 is centered (subtracted the mean from it) but not scaled (not also divided by sd)
+# test2 is standardized (subtracted the mean from it and divided by sd)
+# test is centered and scaled and it's the scaled part i don't understand bc i expected it to mean divied by the sd
+# ohhh wait maybe it's just by 2 sd?
+test$test4 <- test$slope - mean(test$slope)/(2*sd(test$slope))
+View(test[, c("slope", "test", "test2", "test3", "test4")])
+# haha shit nope definitely not
+
+# maybe it's just that i didn't specify sd
+test4 <- scale(test$slope, center = TRUE, scale = TRUE)
+
+sd(test$slope)
+
+# maybe i misunderstood/fucked up the center/scale thing and i need to subtract the mean FIRST then divide by sd
+test$test4 <- (test$slope - mean(test$slope))/sd(test$slope)
+# mmmm yep, story of my life, the problem was that i'm an idiot. cool.
+# glad i didn't use that centered/scaled NSERP biomass model for anything important...
