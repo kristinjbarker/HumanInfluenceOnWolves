@@ -102,9 +102,12 @@ rm(wd_kjb, wd_greg)
 ### ### ###  ### ### ### ###
     
     modDat <- modDatRaw %>%
-      mutate(Used = as.factor(Used),
-             datetime = ymd_hms(datetime),
-             Date = ymd(Date))
+      mutate(datetime = ymd_hms(datetime),
+             Date = ymd(Date),
+             slopeSt = (slope - mean(slope))/sd(slope),
+             elevSt = (elev - mean(elev))/sd(elev),
+             northnessSt = (northness - mean(northness))/sd(northness),
+             sweSt = (swe - mean(swe))/sd(swe))
     
     
     
@@ -132,15 +135,15 @@ rm(wd_kjb, wd_greg)
     # 
     # 
 
-    #### check correlations between human covariates ####
-
-    dat.cor.h <- modDat %>%
-      dplyr::select(distRd, distFeed, distStruc, recClass)
-
-    source("pairs-panels.R")
-    pairs.panels(dat.cor.h)
-
-    save.image("correlationsHuman.RData")
+    # #### check correlations between human covariates ####
+    # 
+    # dat.cor.h <- modDat %>%
+    #   dplyr::select(distRd, distFeed, distStruc, recClass)
+    # 
+    # source("pairs-panels.R")
+    # pairs.panels(dat.cor.h)
+    # 
+    # save.image("correlationsHuman.RData")
 
 
     
@@ -164,21 +167,6 @@ rm(wd_kjb, wd_greg)
 ####   | UNIVARIATE DISTRIBUTIONS |  ####
 ### ### ### ### ### ### ### ### ### ### #
     
-    
-    #### kristin you set aspects = 0  separately
-    # by just writing those lines in wolfspatial and running only those lines
-    #### will need to rerun wolfspatialprep at some point
-    ## this is the code
-    
-    #
-    # if slope = 0, set aspect(s) to 0
-    modDat$northness <- ifelse(modDat$slope == 0, 0, modDat$northness)
-    modDat$north <- ifelse(modDat$slope == 0, 0, modDat$north)
-    modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
-    modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
-
-
-
 
     
   #### ~ Environment ~ ####
@@ -281,11 +269,11 @@ rm(wd_kjb, wd_greg)
         
         ## use words instead of numbers for used/avail
         dat <- modDat %>%
-          mutate(Used = ifelse(Used == 0, "Available", "Used"))     
+          mutate(locType = ifelse(Used == 0, "Available", "Used"))     
         
         
         ## base
-        b <- ggplot(dat, aes(colour = day, fill = day)) + facet_grid(~ Used)
+        b <- ggplot(dat, aes(colour = day, fill = day)) + facet_grid(~ locType)
         
         
         ## human covariates
@@ -303,12 +291,12 @@ rm(wd_kjb, wd_greg)
             pf2
             
             # rec
-            ppnRec <- ddply(dat[!is.na(dat$recClass), ], .(Used, day), summarise,
+            ppnRec <- ddply(dat[!is.na(dat$recClass), ], .(locType, day), summarise,
                            prop = prop.table(table(recClass)),
                            recClass = names(table(recClass)))
             prec2 <- ggplot(ppnRec, aes(recClass, fill = day)) +
               geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
-              facet_grid(~ Used)
+              facet_grid(~ locType)
             prec2     
             
             # all together
@@ -338,12 +326,12 @@ rm(wd_kjb, wd_greg)
             pw2
             
             # landcover
-            ppnLc2 <- ddply(dat, .(Used, day), summarise,
+            ppnLc2 <- ddply(dat, .(locType, day), summarise,
                             prop = prop.table(table(lcClass)),
                             lcClass = names(table(lcClass)))
             pl2 <- ggplot(ppnLc2, aes(lcClass, fill = day)) +
               geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
-              facet_grid(~ Used) 
+              facet_grid(~ locType) 
             pl2
             
             # all together
@@ -362,13 +350,15 @@ rm(wd_kjb, wd_greg)
 
 
         
-        ## diff models for night and day first, bc interacting everything would suck
-
+        ## diff models for night and day 
+            
+        datDay <- filter(modDat, daytime == "day")
+        datNight <- filter(modDat, daytime == "night")
         
-        modDay <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
-                          I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
-                        data = filter(dat, day == 1),
-                        family = binomial(logit))
+        globDay <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + sweSt + 
+                           I(slopeSt*sweSt) + I(northnessSt*sweSt) + Pack + (1|wolfYr),
+                         data = datDay, family = binomial(logit))
+
         
         modNight <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
                           I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
