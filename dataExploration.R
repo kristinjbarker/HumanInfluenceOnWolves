@@ -107,7 +107,7 @@ rm(wd_kjb, wd_greg)
              slopeSt = (slope - mean(slope))/sd(slope),
              elevSt = (elev - mean(elev))/sd(elev),
              northnessSt = (northness - mean(northness))/sd(northness),
-             sweSt = (swe - mean(swe))/sd(swe))
+             snowSt = (snowCm - mean(snowCm))/sd(snowCm))
     
     
     
@@ -355,13 +355,12 @@ rm(wd_kjb, wd_greg)
         datDay <- filter(modDat, daytime == "day")
         datNight <- filter(modDat, daytime == "night")
         
-        globDay <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + sweSt + 
-                           I(slopeSt*sweSt) + I(northnessSt*sweSt) + Pack + (1|wolfYr),
+        globDay <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
                          data = datDay, family = binomial(logit))
 
-        
-        modNight <- glmer(Used ~ 1 + slope + lcClass + can + elev + northness + swe +
-                          I(slope*swe) + I(northness*swe) + I(can*swe) + (wolfYr | Pack), 
-                        data = filter(dat, day == 0),
-                        family = binomial(logit))        
+        globNight <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
+                         data = datNight, family = binomial(logit))
+   
         
