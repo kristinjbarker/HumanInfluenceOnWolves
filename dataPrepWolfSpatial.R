@@ -123,11 +123,11 @@
       # structures
       strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
       
-      # prey availability
-      preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
-      preyAEA <- spTransform(preyUTM, aea)
-      
-      
+      # # prey availability
+      # preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
+      # preyAEA <- spTransform(preyUTM, aea)
+      # 
+      # 
       
     #### Metadata ####
       
@@ -200,13 +200,18 @@
         # identify the closest feedground (shortest distance)
         distFeedMin <- apply(distFeedRaw, 2, min)
         
+        # identify whether it's a feedground that always active
+        whichFeedMin <- apply(distFeedRaw, 2, which.min)
+        
         # make it longform
         distFeed <- data.frame(
           rowNum = names(distFeedMin),
-          distFeed = distFeedMin)
+          distFeed = distFeedMin,
+          activeFeed = whichFeedMin)
         
-        
-        
+        # note that alkali (0) and fish creek (2) aren't always active
+        distFeed$activeFeed <- ifelse(distFeed$activeFeed == 0 | distFeed$activeFeed == 2, 0, 1)
+
 
       ## Structures ## 
         
@@ -235,42 +240,42 @@
             
         
         
-      ## Prey availability ##
-        
-        # create blank df to store results
-        distPrey <- data.frame(rowNum = NA, distPrey = NA)
-        distPrey <- distPrey[-1,]
-   
-        
-        # use prey availability specific to the year when the location was recorded
-        yrs <- unique(locs$Year)
-        
-        for (i in 1:length(yrs)) {
-          
-          # identify year (but for early wolves, use 2008 elk distn bc that's earliest i have)
-          iYr <- yrs[i]
-          iYr2 <- ifelse(iYr < 2008, 2008, iYr)
-          
-          # pull polygon of elk distribution during that year
-          iElk <- preyAEA[preyAEA$id == iYr2, ]
-          iLocs <- locsAEA[locsAEA$Year == iYr, ]
-
-          # calculate distance to elk polygon
-          distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
-            
-          # identify the shortest distance
-          distElkMin <- apply(distElkRaw, 2, min)
-        
-          # make it longform
-          distElk <- data.frame(
-            rowNum = names(distElkMin),
-            distPrey = distElkMin)
-        
-          # join to master
-          distPrey <- rbind(distPrey, distElk) 
-          
-        }
-        
+      # ## Prey availability ##
+      #   
+      #   # create blank df to store results
+      #   distPrey <- data.frame(rowNum = NA, distPrey = NA)
+      #   distPrey <- distPrey[-1,]
+      # 
+      #   
+      #   # use prey availability specific to the year when the location was recorded
+      #   yrs <- unique(locs$Year)
+      #   
+      #   for (i in 1:length(yrs)) {
+      #     
+      #     # identify year (but for early wolves, use 2008 elk distn bc that's earliest i have)
+      #     iYr <- yrs[i]
+      #     iYr2 <- ifelse(iYr < 2008, 2008, iYr)
+      #     
+      #     # pull polygon of elk distribution during that year
+      #     iElk <- preyAEA[preyAEA$id == iYr2, ]
+      #     iLocs <- locsAEA[locsAEA$Year == iYr, ]
+      # 
+      #     # calculate distance to elk polygon
+      #     distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
+      #       
+      #     # identify the shortest distance
+      #     distElkMin <- apply(distElkRaw, 2, min)
+      #   
+      #     # make it longform
+      #     distElk <- data.frame(
+      #       rowNum = names(distElkMin),
+      #       distPrey = distElkMin)
+      #   
+      #     # join to master
+      #     distPrey <- rbind(distPrey, distElk) 
+      #     
+      #   }
+      #   
         
                 
         
@@ -282,8 +287,8 @@
           mutate(rowNum = rownames(locsAEA@data)) %>%
           left_join(distRd, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
-          left_join(distStruc, by = "rowNum") %>%
-          left_join(distPrey, by = "rowNum")
+          left_join(distStruc, by = "rowNum") # %>%
+          # left_join(distPrey, by = "rowNum")
 
     
 
@@ -344,11 +349,11 @@
     #### combine all covariate data ####
     
       modDatRaw <- distDat %>%
-        dplyr::select(c(rowNum, distRd, distFeed, distStruc, distPrey)) %>%
+        dplyr::select(c(rowNum, distRd, distFeed, activeFeed, distStruc)) %>% # , distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, swe, 
-                        distRd, distFeed, distStruc, distPrey, 
+                        distRd, distFeed, activeFeed, distStruc, # distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum))
       
@@ -415,18 +420,7 @@
         modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
         modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
 
-        
-    #### add dates of active feeding on feedgrounds ####     
-        
-        
-        ## only if you can get GV dates ##
-        
-        ## refuge dates are in /elk/joes master data (feeedstart and feedend)
-        
-
-        
-        
-        
+      
         
         
     #### finish him ####
