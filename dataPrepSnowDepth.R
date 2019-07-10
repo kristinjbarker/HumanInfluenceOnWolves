@@ -120,20 +120,94 @@
         # quick try again after extracting a different file with the '' option unchecked in winzip as per snodas instructions
         file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv01025SlL00T0024TTNATS2005010205DP001.txt")
         # ok nvm seriously stop working on this
+        
+        
+        
+        
+        ## take 2, next day
+        
+        ## first opened manually-downloaded files and realized the .dat and .txt files are actually still compressed
+        ## unzipped this one us_ssmv11036tS__T0001TTNATS2005010105HP001.dat it's the exact same file name as before
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat")
+        # ha. now it's true. ok so issue #1 is that you have to double-unzip the damn files
+        
+        # let's play with the data to see how to make raster/spatial etc
+        
+        z <- read.table("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat")
     
-    
-    
-    
-    #### KRISTIN YOU LEFT OFF HERE ####
-    
-    # for some reason R can't recognize .dat files or .txt files
-    # including both the ones you use r to download into a temp file and the ones you manually download and extract to your machine
-    # at a total loss as to why not. 
-    # unz(temp, "us_ssmv11036tS__T0001TTNATS2005010105HP001.dat") # prints a descrip like it's real and r found it
-    # but file.exists prints FALSE even when you paste the filename in
-    # so unz finds it but file.exists doesn't and you need to figure that out i guess
-    # file.exists can find other file types in the same folder (but not the .dat or .txt files that were extracted there by winzip)
-    # gotta have something to do with your not understanding how compression/decompression works
+        # oh right i extracted those before i read the instructions on unchecking that box, delete and redownload
+        
+        
+        ## alright manual steps are:
+        
+        # 1. 
+        
+        # unzip .tar for one day (data arranged in folders per month then per year)
+          # this extracts a bunch of snow data, each one includes a .dat and a .txt file
+        # unzip snow depth files, which start with us_ssmv11036tS...
+        # OH these have a secret .gz extension; that's gotta be part of the issue see if r can see those
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat") #F
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat.gz") #T
+        # A HA tricky mothafuckas. 
+        # ok that solves one problem but keep going manually to make sure you understand how to manipulate files
+        
+        # 2. 
+        
+        # unzip .dat (and .txt?) files for snow depth that were in that .tar along with a bunch of other files
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat")
+        z <- read.table("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat")
+        # eh fuck it's still all fucked up, one obs of some fucked up character-looking mumbojumbo
+        z <- read.delim("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat")
+        # and this gives 0 obs 
+        z <- read.table("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat", skip = 3)
+        # 0 obs
+        
+        
+        # let's make this a little less unweildy... er, more weildy...
+        f <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001.dat"
+        z <- read.delim(f)
+        z <- read.delim(f, header = TRUE) # 0 obs of 1 vrbl
+
+        
+        # error is "incomplete final line". 
+        # this means 'last line of the file doesn't end with an End Of Line (EOL) character (linefeed (\n) or carriage return+linefeed (\r\n))'
+        # the way you're supposed to fix it is by opening the file andhitting enter at the end of the last row
+        # which is fucking stupid and i'm not going to do it
+        # so i need to use r to append an end of line character
+        
+        test <- cat("\n", file = find.file(f), append = TRUE) # NULL value .
+        z <- read.delim(f, header = TRUE, fileEncoding = "UTF-8")
+        z <- read.delim(f, fileEncoding = "UTF-8")
+        
+        # i opened the file in notpad and just hit save as, appended "_kjb" to end of file name. i think it made it a txt
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001_kjb.dat") #F
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001_kjb.txt") # yep
+        g <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001_kjb.txt"
+        zz <- read.delim(g) # same incomplete final line warning
+        zz <- read.delim(g, header = TRUE, fileEncoding = "UTF-16") # haha so many problems
+        
+        # opened _kjb.txt in notepad++ again, went to last line (l 56810), hit enter, saved and closed
+        file.exists("C:\\Users\\Kristin\\Box Sync\\Documents\\Data\\Environment\\snowDepth\\testing123\\us_ssmv11036tS__T0001TTNATS2005010105HP001_kjb.txt")
+        zz <- read.delim(g) # same error wtf
+        
+        # mk read through the info about how to open/convert files using gdal and/or arcmap
+        # i think i'm hosed for using r for this
+        # SO
+        # i can either say fuck it and stick with swe for now (which i don't love)
+        # or figure out the python/gdal thing which will take some time but appears doable
+        # or i can use the arcmap instructions which will also take time but doesn't require learning a new thing
+        # let's spend a bit of time investigating the arc option
+        
+        # yeah looks like arcmap will be easiest but ihave to do it manually for 30files*3months*14years, dear god 1260
+        
+        # HERE is a really cool python script to handle this (i think) but you'd need to pester owen for help understanding it
+        # https://github.com/dshean/snowtools/blob/master/snowtools/get_snodas.py
+        
+
+        
+    # misc previous notes and resources from take 1
+        
+        
         
         # here's a questionable researchgate QnA https://www.researchgate.net/post/How_do_I_read_dat_files_in_R
         # this is where you pull files from ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/masked/2005/01_Jan/
