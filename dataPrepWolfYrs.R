@@ -423,9 +423,12 @@
 ### ### ### ### ### ### ### ### ### ### ### ### ###
         
         
-        # add wolf-year and 'used' signifier
-        # locsAll$wolfYr <- paste0(locsAll$Wolf, "-", locsAll$Year)
+        # add 'used' signifier
         locsAll$Used <- 1
+            
+        # fix pack designations (multiple versions of LGV pack in OG wolf data sources)
+        locsAll$Pack <- ifelse(grepl("Gros Ventre|GV", locsAll$Pack), "Lower Gros Ventre", as.character(locsAll$Pack))
+            
         
         # make spatial (UTM format to match elk distribution data)
         locsAllUTM <- SpatialPointsDataFrame(
