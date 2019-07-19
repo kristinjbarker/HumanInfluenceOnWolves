@@ -110,6 +110,10 @@ rm(wd_kjb, wd_greg)
              snowSt = (snowCm - mean(snowCm))/sd(snowCm))
     
     
+
+    # temp code - this will be unnecessary after rerunning from dataPrepWolfYrs.R
+    # (to fix the multiple instances of LGV)
+    modDat$Pack <- ifelse(grepl("Gros Ventre|GV", modDat$Pack), "Lower Gros Ventre", as.character(modDat$Pack))    
     
     
     
@@ -126,7 +130,7 @@ rm(wd_kjb, wd_greg)
     # #### check correlations between environmental covariates ####
     # 
     # dat.cor <- modDat %>%
-    #   dplyr::select(can, elev, lc, rug, slope, swe, northness)
+    #   dplyr::select(can, elev, lc, rug, slope, snow, northness)
     # 
     # source("pairs-panels.R")    
     # pairs.panels(dat.cor)
@@ -150,7 +154,7 @@ rm(wd_kjb, wd_greg)
     # #### check correlations between "top" environmental covariates and human covariates ####
     # 
     # dat.cor <- modDat %>%
-    #   dplyr::select(can, elev, lc, rug, slope, swe, northness)
+    #   dplyr::select(can, elev, lc, rug, slope, snow, northness)
     # 
     # source("pairs-panels.R")    
     # pairs.panels(dat.cor)
@@ -211,9 +215,9 @@ rm(wd_kjb, wd_greg)
         pR <- a + geom_density(aes(rug, fill = Used), alpha = 0.2, size = 1)
       #  pR   
         
-    #### ruggedness ####
+    #### snow ####
         
-        pW <- a + geom_density(aes(swe, fill = Used), alpha = 0.2, size = 1)
+        pW <- a + geom_density(aes(snowCm, fill = Used), alpha = 0.2, size = 1)
       #  pW            
 
     #### all environmental together ####
@@ -268,12 +272,12 @@ rm(wd_kjb, wd_greg)
         
         
         ## use words instead of numbers for used/avail
-        dat <- modDat %>%
+        plotDat <- modDat %>%
           mutate(locType = ifelse(Used == 0, "Available", "Used"))     
         
         
         ## base
-        b <- ggplot(dat, aes(colour = day, fill = day)) + facet_grid(~ locType)
+        b <- ggplot(plotDat, aes(colour = daytime, fill = daytime)) + facet_grid(~ locType)
         
         
         ## human covariates
@@ -291,10 +295,10 @@ rm(wd_kjb, wd_greg)
             pf2
             
             # rec
-            ppnRec <- ddply(dat[!is.na(dat$recClass), ], .(locType, day), summarise,
+            ppnRec <- ddply(plotDat[!is.na(plotDat$recClass), ], .(locType, daytime), summarise,
                            prop = prop.table(table(recClass)),
                            recClass = names(table(recClass)))
-            prec2 <- ggplot(ppnRec, aes(recClass, fill = day)) +
+            prec2 <- ggplot(ppnRec, aes(recClass, fill = daytime)) +
               geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
               facet_grid(~ locType)
             prec2     
@@ -305,10 +309,10 @@ rm(wd_kjb, wd_greg)
         
         ## environmental covariates
             
-            # canopy
-            pc2 <- b + geom_density(aes(can), alpha = 0.2, size = 1)
-            pc2
-            
+            # # canopy
+            # pc2 <- b + geom_density(aes(can), alpha = 0.2, size = 1)
+            # pc2
+            # 
             # aspect
             pn2 <- b + geom_density(aes(northness), alpha = 0.2, size = 1)
             pn2
@@ -322,20 +326,20 @@ rm(wd_kjb, wd_greg)
             ps2
             
             # snow
-            pw2 <- b + geom_density(aes(swe), alpha = 0.2, size = 1)
+            pw2 <- b + geom_density(aes(snowCm), alpha = 0.2, size = 1)
             pw2
             
             # landcover
-            ppnLc2 <- ddply(dat, .(locType, day), summarise,
+            ppnLc2 <- ddply(plotDat, .(locType, daytime), summarise,
                             prop = prop.table(table(lcClass)),
                             lcClass = names(table(lcClass)))
-            pl2 <- ggplot(ppnLc2, aes(lcClass, fill = day)) +
+            pl2 <- ggplot(ppnLc2, aes(lcClass, fill = daytime)) +
               geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
               facet_grid(~ locType) 
             pl2
             
             # all together
-            pa2 <- plot_grid(pc2, pn2, pe2, ps2, pr2, pw2, ncol = 2)
+            pa2 <- plot_grid(pn2, pe2, ps2, pw2, ncol = 2)
             plot_grid(pa2, pl2, nrow = 2, rel_heights = c(0.75, 0.25))
 
 
@@ -350,7 +354,7 @@ rm(wd_kjb, wd_greg)
 
 
         
-        ## diff models for night and day 
+        #### global environmental models for night and day ####
             
         datDay <- filter(modDat, daytime == "day")
         datNight <- filter(modDat, daytime == "night")
@@ -362,5 +366,70 @@ rm(wd_kjb, wd_greg)
         globNight <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                            I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
                          data = datNight, family = binomial(logit))
+        
+        save.image("prelimGlobalModels.RData")
    
+        
+        #### extracting and visualizing global model output ####
+        
+        summary(globDay)
+        summary(globNight)
+        
+        
+        
+        
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### ###
+####   | PRELIM MODEL RESULTS PLOTS |  ####
+### ### ### ### ### ### ### ### ### ### ###
+        
+        
+        # make dataframe of odds ratios and confidence intervals for each model
+        # (you'd be cooler if you did this in a function)
+        # also don't forget to delete Wald for final product (it's fast but inaccurate)
+        
+        dDay <- round(exp(data.frame(
+          OR = fixef(globDay),
+          ciLow = confint(globDay, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(globDay, parm = "beta_", method = "Wald")[,2])), 3)
+        dDay$Covariate = rownames(dDay)
+        dDay$timing = "day"
+        dNight <- round(exp(data.frame(
+          OR = fixef(globNight),
+          ciLow = confint(globNight, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(globNight, parm = "beta_", method = "Wald")[,2])), 3)
+        dNight$Covariate = rownames(dNight)
+        dNight$timing = "night"
+        dBoth <- rbind(dDay, dNight)
+
+        # remove Pack and Intercept
+        dBothSub <- filter(dBoth, !grepl("Pack|Intercept", Covariate))
+        
+        # order covariates more intuitively across x-axis
+        dBothSub2 <- dBothSub %>%
+          filter(!grepl("lc", Covariate)) %>%
+          mutate(Covariate = factor(Covariate, 
+            levels=c("elevSt", "northnessSt", "slopeSt", "snowSt", 
+                     "I(slopeSt * snowSt)", "I(northnessSt * snowSt)")))
+        
+        # plot OR +- 95%CI colored by day/night - continuous covariates
+        ggplot(dBothSub2, aes(x = Covariate, y = OR, colour = daytime)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1))
+        
+        
+        # plot OR +- 95%CI colored by day/night - categorical covariate
+        ggplot(filter(dBothSub, grepl("lc", Covariate)), aes(x = Covariate, y = OR, colour = daytime)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1))        
+        
+        
+        
+
+
         
