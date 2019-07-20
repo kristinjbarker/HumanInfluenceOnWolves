@@ -46,6 +46,8 @@ rm(wd_kjb, wd_greg)
       #"sp",            ## spatial work
       #"sf",            ## spatial work like the kids are doing it these days
       "lme4",           ## regression models
+      "nlme",           ## better option for regression models?
+      "AICcmodavg",     ## model comparison
       "ggplot2",        ## totes adorbs plots
       "gridExtra",      ## arrange multiple plots
       "cowplot",        ## samesies
@@ -78,7 +80,7 @@ rm(wd_kjb, wd_greg)
     
   #### Increase memory limit ####
     
-    memory.limit(size = 7500000) 
+    memory.limit(size = 97500000) 
 
     
     
@@ -107,7 +109,8 @@ rm(wd_kjb, wd_greg)
              slopeSt = (slope - mean(slope))/sd(slope),
              elevSt = (elev - mean(elev))/sd(elev),
              northnessSt = (northness - mean(northness))/sd(northness),
-             snowSt = (snowCm - mean(snowCm))/sd(snowCm))
+             snowSt = (snowCm - mean(snowCm))/sd(snowCm),
+             lcClass = factor(lcClass, levels = c("NoVeg", "Herbaceous", "Shrub", "Riparian", "Forest", "UrbanVeg")))
     
     
 
@@ -348,43 +351,118 @@ rm(wd_kjb, wd_greg)
   
     
     
-### ### ### ### ### ### ### ### ### ### #
-####   | PRELIM GLOBAL MODEL |  ####
-### ### ### ### ### ### ### ### ### ### #
+### ### ### ### ### ### ### ### ### ### ### ### ###
+####   | DETERMINE RANDOM EFFECTS STRUCTURE |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
         
         #### split data for night and day (faster than filtering in model, i think) ####
             
-        datDay <- filter(modDat, daytime == "day")
-        datNight <- filter(modDat, daytime == "night")
+            datDay <- filter(modDat, daytime == "day")
+            datNight <- filter(modDat, daytime == "night")
         
         
         
-        #### prelim envt global models - pack and wolfYr rndm but not nested (bad?) ####     
+        #### use 'beyond optimal' model to test fit of diff random effects structures ####  
         
-        globDay <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr) + (1|Pack),
-                         data = datDay, family = binomial(logit), nAGQ = 1)
+            
+            ## day ##
+                
+                dNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                    I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                             data = datDay, method = "REML")
+                
+                dSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                            random = list(wolfYr=~1, Pack=~1), 
+                            data = datDay, method = "REML")
+                
+                dNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                            random = ~1 + wolfYr|Pack, 
+                            data = datDay, method = "REML") # takes too much memory, try on desktop
+                
+                anova(dNoRE, dSepRE, dNestRE)
+                
+                reDay <- ()
+            
+            
+                
+            ## night ##
+    
+    
+                nNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                    I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                             data = datNight, method = "REML")
+                
+                nSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                            random = list(wolfYr=~1, Pack=~1), 
+                            data = datNight, method = "REML")
+                
+                nNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                            random = ~1 + wolfYr|Pack, 
+                            data = datNight, method = "REML")
+                
+                anova(nNoRE, nSepRE, nNestRE)
+                
+                reNight <- ()
+                
+                
+        #### check model fit ####
+            
+              dResid <- resid(reDay, type="normalized")
+              nResid <- resid(reNight, type="normalized")
+                
+              coplot(dResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
+                     data = datDay, ylab="Normalised residuals")
+              coplot(NResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
+                     data = datNight, ylab="Normalised residuals")          
+              
+        
+        #### global environmental models ####    
+                
+                
+            ## day ##
+                
+                
+                
 
+              
+                    
+            ## night ##
+                  
+                
+        
 
-        globNight <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                           I(slopeSt*snowSt) + I(northnessSt*snowSt)+ (1|wolfYr) + (1|Pack),
-                         data = datNight, family = binomial(logit), nAGQ = 1)        
+                   
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### ### ### ###
+####   | DETERMINE ENVIRONMENTAL COVARIATES |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ###        
         
-        beepr::beep("shotgun")
         
         
-        #### prelim envt global models - pack fixed ####        
+                
+                
+                
+                
+                
+                
+                
+                
+                
         
-        globDay2 <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
-                         data = datDay, family = binomial(logit))
-
-        globNight2 <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
-                         data = datNight, family = binomial(logit))
         
+################################################################################################## #  
+              
+              
+              
         save.image("prelimGlobalModels.RData")
    
         
