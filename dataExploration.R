@@ -354,16 +354,34 @@ rm(wd_kjb, wd_greg)
 
 
         
-        #### global environmental models for night and day ####
+        #### split data for night and day (faster than filtering in model, i think) ####
             
         datDay <- filter(modDat, daytime == "day")
         datNight <- filter(modDat, daytime == "night")
         
+        
+        
+        #### prelim envt global models - pack and wolfYr rndm but not nested (bad?) ####     
+        
         globDay <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr) + (1|Pack),
+                         data = datDay, family = binomial(logit), nAGQ = 1)
+
+
+        globNight <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                           I(slopeSt*snowSt) + I(northnessSt*snowSt)+ (1|wolfYr) + (1|Pack),
+                         data = datNight, family = binomial(logit), nAGQ = 1)        
+        
+        beepr::beep("shotgun")
+        
+        
+        #### prelim envt global models - pack fixed ####        
+        
+        globDay2 <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                            I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
                          data = datDay, family = binomial(logit))
 
-        globNight <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+        globNight2 <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                            I(slopeSt*snowSt) + I(northnessSt*snowSt) + Pack + (1|wolfYr),
                          data = datNight, family = binomial(logit))
         
@@ -416,14 +434,14 @@ rm(wd_kjb, wd_greg)
                      "I(slopeSt * snowSt)", "I(northnessSt * snowSt)")))
         
         # plot OR +- 95%CI colored by day/night - continuous covariates
-        ggplot(dBothSub2, aes(x = Covariate, y = OR, colour = daytime)) +
+        ggplot(dBothSub2, aes(x = Covariate, y = OR, colour = timing)) +
           geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
           geom_point() +
           geom_hline(aes(yintercept=1))
         
         
         # plot OR +- 95%CI colored by day/night - categorical covariate
-        ggplot(filter(dBothSub, grepl("lc", Covariate)), aes(x = Covariate, y = OR, colour = daytime)) +
+        ggplot(filter(dBothSub, grepl("lc", Covariate)), aes(x = Covariate, y = OR, colour = timing)) +
           geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
           geom_point() +
           geom_hline(aes(yintercept=1))        
