@@ -2066,3 +2066,106 @@ sd(test$slope)
 test$test4 <- (test$slope - mean(test$slope))/sd(test$slope)
 # mmmm yep, story of my life, the problem was that i'm an idiot. cool.
 # glad i didn't use that centered/scaled NSERP biomass model for anything important...
+
+
+
+
+    
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
+####  | EXTRACTING AND PLOTTING COVARIATE ESTIMATES FROM MODELS |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### 
+
+
+md <- globDay
+mn <- globNight
+
+exp(coef(md)[1]) # newp, this isnt a glm kristin
+
+fixef(md) # ooook it;s fixef not coef that makes sense. these are betas
+exp(fixef(md)) # and these are odds ratios, >1 = selection
+round(exp(fixef(md)),3) # round to 3 decimal places
+# split names and values?
+names(fixef(md))
+# noice
+z <- data.frame(
+  Covariate = names(fixef(md)),
+  OR = round(exp(fixef(md)),3))
+View(z) # yeehaw
+
+# now standard errors, need to remember how many of these to use to calc CI
+round(sqrt(diag(vcov(md))),3) # god i love the internet
+
+z <- data.frame(
+  Covariate = names(fixef(md)),
+  OR = round(exp(fixef(md)),3),
+  ciLow = )
+View(z) 
+
+# wow turns out CIs are hard in random effects models
+# after much googling i found this from bolker
+confint(md,parm="beta_") 
+# oh damn he's not kidding this is super slow
+# so we'll do this for the final version but for now
+# the quick and dirty version is to use Wald CI
+confint(md,parm="beta_", method = "Wald")
+# cool
+confint(md,parm="beta_", method = "Wald")[1] # newp
+confint(md,parm="beta_", method = "Wald")[,1] # yep
+
+z <- data.frame(
+  Covariate = names(fixef(md)),
+  OR = round(fixef(md),3),
+  ciLow = confint(md,parm="beta_", method = "Wald")[,1],
+  ciHigh = confint(md,parm="beta_", method = "Wald")[,2])
+zz <- exp(z) # can you exponentiate the whole thing at once?
+# no silly, you have covariate names in there
+# but if you leave them as just rownames at first it should work
+z <- data.frame(
+  OR = round(fixef(md),3),
+  ciLow = confint(md,parm="beta_", method = "Wald")[,1],
+  ciHigh = confint(md,parm="beta_", method = "Wald")[,2])
+zz <- exp(z) 
+View(z); zz # woooo
+zz$Covariate = rownames(zz)
+zz
+
+# ok sweet. now you just have to figure out how to plot them haha
+# k did that but the scale is so screqy that need to split out lc
+
+        
+        # plot OR +- 95%CI colored by day/night
+        ggplot(dBothSub, aes(x = Covariate, y = OR, colour = daytime)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point()
+        
+        
+# quick check of what those efects of the fucking gv packs looks like
+        # to decide if i can send this to arthur yet or no
+        
+        
+        # remove Pack and Intercept
+        z <- filter(dBoth, grepl("Gros|GV", Covariate))
+        ggplot(z, aes(x = Covariate, y = OR, colour = daytime)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1))
+        
+        # some weirdness but they do all overlap so maybe its not a huge deal
+        
+        
+        
+        
+        
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### ### #
+####   | WORKING THRU IDRE STATS |  ####
+### ### ### ### ### ### ### ### ### ### #        
+        
+        
+        ggpairs(modDat[, c("slope", "rug")]) # eh nvrmnd
