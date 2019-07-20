@@ -2169,3 +2169,85 @@ zz
         
         
         ggpairs(modDat[, c("slope", "rug")]) # eh nvrmnd
+        
+        
+        
+################################################################################################## #  
+
+
+
+### ### ### ### ### ### ### ### ### ### #
+####   | WORKING THRU ZUUR |  ####
+### ### ### ### ### ### ### ### ### ### #      
+        
+        #### (nixed bc bolker says the nlme package doesn't estimate p-vals very well...)
+        
+        dNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                       I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                     data = datDay, method = "REML", control = lmeControl(opt = "optim"))
+        
+        dSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                        I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                      random = list(wolfYr = ~1, Pack = ~1), # unclear whether nested or not
+                      data = datDay, method = "REML", control = lmeControl(opt = "optim"))
+        
+        
+        dNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                         I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                       random = ~1 | Pack/wolfYr, # individual nested in pack
+                       data = datDay, method = "REML", control = lmeControl(opt = "optim")) 
+        
+        
+        anova(dNoRE, dSepRE, dSepRE2, dNestRE)
+        #ok these results are the same for re2 and nest, so i assume it does automatically nest them
+        
+        # oh hell, just read on stack that bolker says lme isn't great with p-val estimates
+        # guess i'll go back to lme4 and do a mix of that and zuur stuff, ugh
+        
+
+        
+        
+        ## night ##
+        
+        
+        nNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                       I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                     data = datNight, method = "REML", control = lmeControl(opt = "optim"))
+        
+        nSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                        I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                      random = list(wolfYr = ~1, Pack = ~1),
+                      data = datNight, method = "REML", control = lmeControl(opt = "optim"))                              
+        
+        nNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                         I(slopeSt*snowSt) + I(northnessSt*snowSt),
+                       #random = ~1|Pack/wolfYr, 
+                       random = ~1 + Pack|wolfYr,
+                       data = datNight, method = "REML", control = lmeControl(opt = "optim")) 
+        
+        anova(nNoRE, nSepRE, nNestRE)
+        bictab(nNoRE, nSepRE, nNestRE)
+
+        
+        
+        #### check model fit ####
+        
+        dResid <- resid(reDay, type="normalized")
+        nResid <- resid(reNight, type="normalized")
+        
+        coplot(dResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
+                 data = datDay, ylab="Normalised residuals")
+        coplot(NResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
+                 data = datNight, ylab="Normalised residuals")          
+        
+
+        
+        
+        
+        ## i killed this one bc it somehow comes out the same crossed or nested
+        
+        dCrosRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                           I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack) + (1|wolfYr), 
+                         family = binomial(logit), data = datDay,
+                         nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))            
+
