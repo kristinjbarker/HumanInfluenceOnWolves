@@ -361,81 +361,103 @@ rm(wd_kjb, wd_greg)
             
             datDay <- filter(modDat, daytime == "day")
             datNight <- filter(modDat, daytime == "night")
-        
-        
+
         
         #### use 'beyond optimal' model to test fit of diff random effects structures ####  
         
             
             ## day ##
-                
-                dNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                    I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                             data = datDay, method = "REML")
-                
-                dSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                            random = list(wolfYr=~1, Pack=~1), 
-                            data = datDay, method = "REML")
-                
-                dNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                            random = ~1 + wolfYr|Pack, 
-                            data = datDay, method = "REML") # takes too much memory, try on desktop
-                
-                anova(dNoRE, dSepRE, dNestRE)
-                
-                reDay <- ()
             
-            
-                
-            ## night ##
-    
-    
-                nNoRE <- gls(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                    I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                             data = datNight, method = "REML")
-                
-                nSepRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                            random = list(wolfYr=~1, Pack=~1), 
-                            data = datNight, method = "REML")
-                
-                nNestRE <- lme(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                     I(slopeSt*snowSt) + I(northnessSt*snowSt),
-                            random = ~1 + wolfYr|Pack, 
-                            data = datNight, method = "REML")
-                
-                anova(nNoRE, nSepRE, nNestRE)
-                
-                reNight <- ()
-                
-                
-        #### check model fit ####
-            
-              dResid <- resid(reDay, type="normalized")
-              nResid <- resid(reNight, type="normalized")
-                
-              coplot(dResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
-                     data = datDay, ylab="Normalised residuals")
-              coplot(NResid ~ #PASTE MODEL IN HERE BUT USE | INSTEAD OF * FOR INTRXNS, zuur p 85, 
-                     data = datNight, ylab="Normalised residuals")          
-              
-        
-        #### global environmental models ####    
-                
-                
-            ## day ##
-                
-                
-                
-
-              
+                # specify models #
                     
-            ## night ##
-                  
+                dNoRE <- glm(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                               I(slopeSt*snowSt) + I(northnessSt*snowSt), 
+                             family = binomial(logit), data = datDay)
                 
-        
+                dPackRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                  I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack), 
+                                family = binomial(logit), data = datDay,
+                                nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
+                
+                dWolfRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
+                                 family = binomial(logit), data = datDay,
+                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
+                
+                dNestRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
+                                 family = binomial(logit), data = datDay,
+                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))      
+            
+            # compete models #
+                    
+                AIC(dNoRE, dPackRE, dWolfRE, dNestRE) # model without random effects is least-supported
+                candMods <- list()
+                candMods[[1]] <- dPackRE
+                candMods[[2]] <- dWolfRE
+                candMods[[3]] <- dNestRE
+                aictab(cand.set = candMods, modnames = c("dPackRE", "dWolfRE", "dNestRE"))
+                # nested ftw
+                reDay <- dNestRE
+               
+                
+                 
+            ## night ##
+            
+                nNoRE <- glm(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                               I(slopeSt*snowSt) + I(northnessSt*snowSt), 
+                             family = binomial(logit), data = datNight)
+                
+                nPackRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack), 
+                                 family = binomial(logit), data = datNight,
+                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
+                
+                nWolfRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
+                                 family = binomial(logit), data = datNight,
+                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
+                
+                nNestRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
+                                 family = binomial(logit), data = datNight,
+                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))                 
+    
+                # compete models #
+                AIC(nNoRE, nPackRE, nWolfRE, nNestRE) # model without random effects is least-supported
+                candMods <- list()
+                candMods[[1]] <- nPackRE
+                candMods[[2]] <- nWolfRE
+                candMods[[3]] <- nNestRE
+                aictab(cand.set = candMods, modnames = c("nPackRE", "nWolfRE", "nNestRE"))
+                # nested ftw
+                reNight <- nNestRE
+                
+                
+        #### attempt to check model fits ####
+            
+              dResid <- resid(reDay, type = "pearson", scaled = "true")
+              nResid <- resid(reNight, type = "pearson", scaled = "true")
+
+              coplot(dResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                       slopeSt|snowSt + northnessSt|snowSt,
+                     data = datDay, ylab="Normalised residuals") ## umm yeah this looks awful
+
+              coplot(nResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                       slopeSt|snowSt + northnessSt|snowSt,
+                     data = datDay, ylab="Normalised residuals")
+              
+              
+              plot(reDay)
+              qqnorm(residuals(reDay))    
+              qqnorm(resid(reDay, type = "pearson", scaled = "true"))
+              plot(reDay, col = 1)
+              
+              qqnorm(resid(dNoRE)) # oh good well at least this one looks even worse
+
+              # i'm just gonna peek at the new covariate plots anyway
+              
+              
 
                    
 ################################################################################################## #  
@@ -488,15 +510,15 @@ rm(wd_kjb, wd_greg)
         # also don't forget to delete Wald for final product (it's fast but inaccurate)
         
         dDay <- round(exp(data.frame(
-          OR = fixef(globDay),
-          ciLow = confint(globDay, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(globDay, parm = "beta_", method = "Wald")[,2])), 3)
+          OR = fixef(reDay),
+          ciLow = confint(reDay, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(reDay, parm = "beta_", method = "Wald")[,2])), 3)
         dDay$Covariate = rownames(dDay)
         dDay$timing = "day"
         dNight <- round(exp(data.frame(
-          OR = fixef(globNight),
-          ciLow = confint(globNight, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(globNight, parm = "beta_", method = "Wald")[,2])), 3)
+          OR = fixef(reNight),
+          ciLow = confint(reNight, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(reNight, parm = "beta_", method = "Wald")[,2])), 3)
         dNight$Covariate = rownames(dNight)
         dNight$timing = "night"
         dBoth <- rbind(dDay, dNight)
