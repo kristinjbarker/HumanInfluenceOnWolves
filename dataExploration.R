@@ -102,7 +102,9 @@ rm(wd_kjb, wd_greg)
 ### ### ###  ### ### ### ###
 ####   | FORMAT DATA |  ####
 ### ### ###  ### ### ### ###
+
     
+    # standardize covariates; order factor levels    
     modDat <- modDatRaw %>%
       mutate(datetime = ymd_hms(datetime),
              Date = ymd(Date),
@@ -110,15 +112,21 @@ rm(wd_kjb, wd_greg)
              elevSt = (elev - mean(elev))/sd(elev),
              northnessSt = (northness - mean(northness))/sd(northness),
              snowSt = (snowCm - mean(snowCm))/sd(snowCm),
+             canSt = (can - mean(can))/sd(can),
+             # order landcover from most to least available
              lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "UrbanVeg", "NoVeg")))
     
-    
 
-    # temp code - this will be unnecessary after rerunning from dataPrepWolfYrs.R
-    # (to fix the multiple instances of LGV)
+
+    # temp code to fix the multiple instances of LGV - will be unnecessary after rerunning from dataPrepWolfYrs.R
     modDat$Pack <- ifelse(grepl("Gros Ventre|GV", modDat$Pack), "Lower Gros Ventre", as.character(modDat$Pack))    
     
     
+    
+    # split data for night and day (faster than filtering in model, i think) #
+    datDay <- filter(modDat, daytime == "day")
+    datNight <- filter(modDat, daytime == "night")    
+
     
 ################################################################################################## #  
   
@@ -167,105 +175,7 @@ rm(wd_kjb, wd_greg)
     # 
     
 ################################################################################################## #  
-  
-    
-    
-### ### ### ### ### ### ### ### ### ### #
-####   | UNIVARIATE DISTRIBUTIONS |  ####
-### ### ### ### ### ### ### ### ### ### #
-    
 
-    
-  #### ~ Environment ~ ####
-    
-    ## base ##
-          
-        a <- ggplot(modDat, aes(colour = Used))
-    
-    ## canopy cover ##
-    
-        pC <- a + geom_density(aes(can, fill = Used), alpha = 0.2, size = 1)
-
-        
-    ## northness ##
-        
-        pN <- a + geom_density(aes(northness, fill = Used), alpha = 0.2, size = 1)
-
-        
-    ## elev ##
-        
-        pE <- a + geom_density(aes(elev, fill = Used), alpha = 0.2, size = 1)
-
-        
-    ## slope ##
-        
-        pS <- a + geom_density(aes(slope, fill = Used), alpha = 0.2, size = 1)
-
-        
-    ## ruggedness ##
-        
-        pR <- a + geom_density(aes(rug, fill = Used), alpha = 0.2, size = 1)
-
-    
-    ## snow ##
-        
-        pW <- a + geom_density(aes(snowCm, fill = Used), alpha = 0.2, size = 1)
-
-
-    ## landcover ##
-      
-      ppnLc <- ddply(modDat, .(Used), summarise,
-                     prop = prop.table(table(lcClass)),
-                     lcClass = names(table(lcClass)))
-      pL <- ggplot(ppnLc, aes(lcClass, fill = Used)) +
-        geom_bar(aes(y = prop), stat = "identity", position = "dodge")
-
-        
-    #### all environmental together ####
-        
-        pA <- plot_grid(pC, pN, pE, pS, pR, pW, ncol = 2)
-        plot_grid(pA, pL, nrow = 2, rel_heights = c(0.75, 0.25))
-        
-        
-  #### ~ Human ~ ####  
-        
-    #### roads ####
-        pRd <- a + geom_density(aes(distRd, fill = Used), alpha = 0.2, size = 1)
-      #  pRd
-
-    #### buildings ####
-        pB <- a + geom_density(aes(distStruc, fill = Used), alpha = 0.2, size = 1)
-      #  pB        
-        
-        
-    #### feedgrounds ####    
-        pF <- a + geom_density(aes(distFeed, fill = Used), alpha = 0.2, size = 1)
-      #  pF         
- 
-    #### rec ####        
-     
-        ppnRec <- ddply(modDat[!is.na(modDat$recClass), ], .(Used), summarise,
-                       prop = prop.table(table(recClass)),
-                       recClass = names(table(recClass)))
-        pRc <- ggplot(ppnRec, aes(recClass, fill = Used)) +
-          geom_bar(aes(y = prop), stat = "identity", position = "dodge")
-     #   pRc           
-        
-    #### all human together ####
-        
-        grid.arrange(pRd, pB, pF, pRc, ncol = 2)       
-        
-        
-    #### resources ####
-        
-        # https://cran.r-project.org/web/packages/cowplot/vignettes/plot_grid.html
-        # https://bioinfo.iric.ca/introduction-to-cowplot/
-        # https://stackoverflow.com/questions/14818529/plot-histograms-over-factor-variables
-        
- 
-################################################################################################## #  
-  
-    
     
 ### ### ### ### ### ### ### ### ### ### ### ### ### ##
 ####   | UNIVARIATE DISTRIBUTIONS BY DAY/NIGHT |  ####
@@ -280,21 +190,51 @@ rm(wd_kjb, wd_greg)
         ## base
         b <- ggplot(plotDat, aes(colour = daytime, fill = daytime)) + facet_grid(~ locType)
         
+       
+        ## environmental covariates
+            
+            # canopy
+            pc2 <- b + geom_density(aes(can), alpha = 0.2, size = 1)
+
+            # aspect
+            pn2 <- b + geom_density(aes(northness), alpha = 0.2, size = 1)
+
+            # elev
+            pe2 <- b + geom_density(aes(elev), alpha = 0.2, size = 1)
+
+            # slope
+            ps2 <- b + geom_density(aes(slope), alpha = 0.2, size = 1)
+
+            # snow
+            pw2 <- b + geom_density(aes(snowCm), alpha = 0.2, size = 1)
+            
+            # ruggedness
+            pg2 <- b + geom_density(aes(rug), alpha = 0.2, size = 1)
+
+            # landcover
+            ppnLc2 <- ddply(plotDat, .(locType, daytime), summarise,
+                            prop = prop.table(table(lcClass)),
+                            lcClass = names(table(lcClass)))
+            pl2 <- ggplot(ppnLc2, aes(lcClass, fill = daytime)) +
+              geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
+              facet_grid(~ locType) 
+
+            # all together
+            pa2 <- plot_grid(pw2, pn2, pe2, ps2, pc2, pg2, ncol = 2)
+            plot_grid(pa2, pl2, nrow = 2, rel_heights = c(0.75, 0.25))
+
         
         ## human covariates
         
             # rd
             pr2 <- b + geom_density(aes(distRd), alpha = 0.2, size = 1) 
-            pr2
-            
+
             # bldg
             pb2 <- b + geom_density(aes(distStruc), alpha = 0.2, size = 1) 
-            pb2        
-            
+
             # feed
             pf2 <- b + geom_density(aes(distFeed), alpha = 0.2, size = 1) 
-            pf2
-            
+
             # rec
             ppnRec <- ddply(plotDat[!is.na(plotDat$recClass), ], .(locType, daytime), summarise,
                            prop = prop.table(table(recClass)),
@@ -307,43 +247,7 @@ rm(wd_kjb, wd_greg)
             # all together
             grid.arrange(pr2, pb2, pf2, prec2, ncol = 2)
         
-        
-        ## environmental covariates
-            
-            # # canopy
-            # pc2 <- b + geom_density(aes(can), alpha = 0.2, size = 1)
-            # pc2
-            # 
-            # aspect
-            pn2 <- b + geom_density(aes(northness), alpha = 0.2, size = 1)
-            pn2
-            
-            # elev
-            pe2 <- b + geom_density(aes(elev), alpha = 0.2, size = 1)
-            pe2
-            
-            # slope
-            ps2 <- b + geom_density(aes(slope), alpha = 0.2, size = 1)
-            ps2
-            
-            # snow
-            pw2 <- b + geom_density(aes(snowCm), alpha = 0.2, size = 1)
-            pw2
-            
-            # landcover
-            ppnLc2 <- ddply(plotDat, .(locType, daytime), summarise,
-                            prop = prop.table(table(lcClass)),
-                            lcClass = names(table(lcClass)))
-            pl2 <- ggplot(ppnLc2, aes(lcClass, fill = daytime)) +
-              geom_bar(aes(y = prop), stat = "identity", position = "dodge") +
-              facet_grid(~ locType) 
-            pl2
-            
-            # all together
-            pa2 <- plot_grid(pn2, pe2, ps2, pw2, ncol = 2)
-            plot_grid(pa2, pl2, nrow = 2, rel_heights = c(0.75, 0.25))
-
-
+ 
                    
 ################################################################################################## #  
   
@@ -354,13 +258,6 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
-        
-        #### split data for night and day (faster than filtering in model, i think) ####
-            
-            datDay <- filter(modDat, daytime == "day")
-            datNight <- filter(modDat, daytime == "night")
-
-        
         #### use 'beyond optimal' model to test fit of diff random effects structures ####  
         
             
@@ -368,21 +265,21 @@ rm(wd_kjb, wd_greg)
             
                 # specify models #
                     
-                dNoRE <- glm(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                dNoRE <- glm(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                I(slopeSt*snowSt) + I(northnessSt*snowSt), 
                              family = binomial(logit), data = datDay)
                 
-                dPackRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                  I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack), 
+                dPackRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                                  I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack)
                                 family = binomial(logit), data = datDay,
                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
                 
-                dWolfRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                dWolfRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                    I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
                                  family = binomial(logit), data = datDay,
                                  nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
                 
-                dNestRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                dNestRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                    I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
                                  family = binomial(logit), data = datDay,
                                  nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))      
@@ -402,21 +299,21 @@ rm(wd_kjb, wd_greg)
                  
             ## night ##
             
-                nNoRE <- glm(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                nNoRE <- glm(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                I(slopeSt*snowSt) + I(northnessSt*snowSt), 
                              family = binomial(logit), data = datNight)
                 
-                nPackRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                nPackRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                    I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack), 
                                  family = binomial(logit), data = datNight,
                                  nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
                 
-                nWolfRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                nWolfRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                    I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
                                  family = binomial(logit), data = datNight,
                                  nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
                 
-                nNestRE <- glmer(Used ~ 1 + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                nNestRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
                                    I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
                                  family = binomial(logit), data = datNight,
                                  nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))                 
@@ -432,28 +329,31 @@ rm(wd_kjb, wd_greg)
                 reNight <- nNestRE
                 
                 
-        #### attempt to check model fits ####
-            
-              dResid <- resid(reDay, type = "pearson", scaled = "true")
-              nResid <- resid(reNight, type = "pearson", scaled = "true")
+        #### attempts to check model fits ####
+                
+                # code from bolker github
+                plot(reDay, main = "day")
+                plot(reNight, main = "night")
+                # well these look fucking awful (i think...)
+                
+                # try qq plots
+                qqnorm(resid(reDay, type = "pearson", scaled = "true")) # fuuuuuuck
+                qqnorm(resid(reNight, type = "pearson", scaled = "true")) # literally the worst i've ever seen
 
-              coplot(dResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                       slopeSt|snowSt + northnessSt|snowSt,
-                     data = datDay, ylab="Normalised residuals") ## umm yeah this looks awful
+                
+                ## code from zuur book, don't bother
+                dResid <- resid(reDay, type = "pearson", scaled = "true")
+                nResid <- resid(reNight, type = "pearson", scaled = "true")
+                coplot(dResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                         slopeSt|snowSt + northnessSt|snowSt,
+                       data = datDay, ylab="Normalised residuals") 
+                coplot(nResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
+                         slopeSt|snowSt + northnessSt|snowSt,
+                       data = datDay, ylab="Normalised residuals")
 
-              coplot(nResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                       slopeSt|snowSt + northnessSt|snowSt,
-                     data = datDay, ylab="Normalised residuals")
               
-              
-              plot(reDay)
-              qqnorm(residuals(reDay))    
-              qqnorm(resid(reDay, type = "pearson", scaled = "true"))
-              plot(reDay, col = 1)
-              
-              qqnorm(resid(dNoRE)) # oh good well at least this one looks even worse
 
-              # i'm just gonna peek at the new covariate plots anyway
+
               
               
 
@@ -467,7 +367,7 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ###        
         
         
-        
+        # remember to use ML not REML for this
                 
                 
                 
