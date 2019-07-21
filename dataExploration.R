@@ -110,7 +110,7 @@ rm(wd_kjb, wd_greg)
              elevSt = (elev - mean(elev))/sd(elev),
              northnessSt = (northness - mean(northness))/sd(northness),
              snowSt = (snowCm - mean(snowCm))/sd(snowCm),
-             lcClass = factor(lcClass, levels = c("NoVeg", "Herbaceous", "Shrub", "Riparian", "Forest", "UrbanVeg")))
+             lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "UrbanVeg", "NoVeg")))
     
     
 
@@ -178,51 +178,49 @@ rm(wd_kjb, wd_greg)
     
   #### ~ Environment ~ ####
     
-    #### canopy cover ####
-        
+    ## base ##
+          
         a <- ggplot(modDat, aes(colour = Used))
-        
-        pC <- a + geom_density(aes(can, fill = Used), alpha = 0.2, size = 1)
-       # pC
     
-    #### landcover ####
+    ## canopy cover ##
+    
+        pC <- a + geom_density(aes(can, fill = Used), alpha = 0.2, size = 1)
+
         
-        ppnLc <- ddply(modDat, .(Used), summarise,
-                       prop = prop.table(table(lcClass)),
-                       lcClass = names(table(lcClass)))
-        pL <- ggplot(ppnLc, aes(lcClass, fill = Used)) +
-          geom_bar(aes(y = prop), stat = "identity", position = "dodge")
-      #  pL
-        
-    #### northness ####
+    ## northness ##
         
         pN <- a + geom_density(aes(northness, fill = Used), alpha = 0.2, size = 1)
-    #    pN
+
         
-        
-    #### elev ####
+    ## elev ##
         
         pE <- a + geom_density(aes(elev, fill = Used), alpha = 0.2, size = 1)
-     #   pE
+
         
-        
-    #### slope ####
+    ## slope ##
         
         pS <- a + geom_density(aes(slope, fill = Used), alpha = 0.2, size = 1)
-      #  pS
+
         
-        
-        
-    #### ruggedness ####
+    ## ruggedness ##
         
         pR <- a + geom_density(aes(rug, fill = Used), alpha = 0.2, size = 1)
-      #  pR   
-        
-    #### snow ####
+
+    
+    ## snow ##
         
         pW <- a + geom_density(aes(snowCm, fill = Used), alpha = 0.2, size = 1)
-      #  pW            
 
+
+    ## landcover ##
+      
+      ppnLc <- ddply(modDat, .(Used), summarise,
+                     prop = prop.table(table(lcClass)),
+                     lcClass = names(table(lcClass)))
+      pL <- ggplot(ppnLc, aes(lcClass, fill = Used)) +
+        geom_bar(aes(y = prop), stat = "identity", position = "dodge")
+
+        
     #### all environmental together ####
         
         pA <- plot_grid(pC, pN, pE, pS, pR, pW, ncol = 2)
