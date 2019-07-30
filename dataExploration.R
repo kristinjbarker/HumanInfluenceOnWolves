@@ -46,7 +46,11 @@ rm(wd_kjb, wd_greg)
       #"sp",            ## spatial work
       #"sf",            ## spatial work like the kids are doing it these days
       "lme4",           ## regression models
-      "nlme",           ## better option for regression models?
+      "arm",            ## binned residual plots
+      "aods3",          ## quick gof tests
+      "pROC",           ## roc plots
+      "plotROC",        ## roc plots
+      "caret",          ## confusion matrices (model predictive accuracy)
       "AICcmodavg",     ## model comparison
       "ggplot2",        ## totes adorbs plots
       "gridExtra",      ## arrange multiple plots
@@ -138,17 +142,18 @@ rm(wd_kjb, wd_greg)
     
     
     
-    # #### check correlations between environmental covariates ####
-    # 
-    # dat.cor <- modDat %>%
-    #   dplyr::select(can, elev, lc, rug, slope, snow, northness)
-    # 
-    # source("pairs-panels.R")    
-    # pairs.panels(dat.cor)
-    # 
+    #### check correlations between environmental covariates ####
+# 
+#     dat.cor <- modDat %>%
+#       dplyr::select(can, elev, lc, rug, slope, snowCm, northness)
+# 
+#     source("pairs-panels.R")
+#     pairs.panels(dat.cor)
+# 
+
     # save.image("correlationsEnvt.RData")
-    # 
-    # 
+
+
 
     # #### check correlations between human covariates ####
     # 
@@ -158,7 +163,7 @@ rm(wd_kjb, wd_greg)
     # source("pairs-panels.R")
     # pairs.panels(dat.cor.h)
     # 
-    # save.image("correlationsHuman.RData")
+    # save.image("correlations.RData")
 
 
     
@@ -250,135 +255,277 @@ rm(wd_kjb, wd_greg)
  
                    
 ################################################################################################## #  
-  
+
     
     
 ### ### ### ### ### ### ### ### ### ### ### ### ###
 ####   | DETERMINE RANDOM EFFECTS STRUCTURE |  ####
-### ### ### ### ### ### ### ### ### ### ### ### ###
+### ### ### ### ### ### ### ### ### ### ### ### ###  
 
-
-        #### use 'beyond optimal' model to test fit of diff random effects structures ####  
         
-            
-            ## day ##
-            
-                # specify models #
-                    
-                dNoRE <- glm(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                               I(slopeSt*snowSt) + I(northnessSt*snowSt), 
-                             family = binomial(logit), data = datDay)
-                
-                dPackRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                  I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack)
-                                family = binomial(logit), data = datDay,
-                                nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
-                
-                dWolfRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
-                                 family = binomial(logit), data = datDay,
-                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
-                
-                dNestRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
-                                 family = binomial(logit), data = datDay,
-                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))      
-            
-            # compete models #
-                    
-                AIC(dNoRE, dPackRE, dWolfRE, dNestRE) # model without random effects is least-supported
-                candMods <- list()
-                candMods[[1]] <- dPackRE
-                candMods[[2]] <- dWolfRE
-                candMods[[3]] <- dNestRE
-                aictab(cand.set = candMods, modnames = c("dPackRE", "dWolfRE", "dNestRE"))
-                # nested ftw
-                reDay <- dNestRE
-               
-                
-                 
-            ## night ##
-            
-                nNoRE <- glm(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                               I(slopeSt*snowSt) + I(northnessSt*snowSt), 
-                             family = binomial(logit), data = datNight)
-                
-                nPackRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack), 
-                                 family = binomial(logit), data = datNight,
-                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap")) # to speed processing
-                
-                nWolfRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|wolfYr), 
-                                 family = binomial(logit), data = datNight,
-                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))
-                
-                nNestRE <- glmer(Used ~ 1 + canSt + slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                                   I(slopeSt*snowSt) + I(northnessSt*snowSt) + (1|Pack/wolfYr), 
-                                 family = binomial(logit), data = datNight,
-                                 nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))                 
-    
-                # compete models #
-                AIC(nNoRE, nPackRE, nWolfRE, nNestRE) # model without random effects is least-supported
-                candMods <- list()
-                candMods[[1]] <- nPackRE
-                candMods[[2]] <- nWolfRE
-                candMods[[3]] <- nNestRE
-                aictab(cand.set = candMods, modnames = c("nPackRE", "nWolfRE", "nNestRE"))
-                # nested ftw
-                reNight <- nNestRE
-                
-                
-        #### attempts to check model fits ####
-                
-                # code from bolker github
-                plot(reDay, main = "day")
-                plot(reNight, main = "night")
-                # well these look fucking awful (i think...)
-                
-                # try qq plots
-                qqnorm(resid(reDay, type = "pearson", scaled = "true")) # fuuuuuuck
-                qqnorm(resid(reNight, type = "pearson", scaled = "true")) # literally the worst i've ever seen
+      #### Specify models ####
+        
+        # no random effect  
+        noreDay <- glm(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt), 
+                       family = binomial(logit),
+                       data = thinDatDay)
+        noreNight <- glm(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt), 
+                         family = binomial(logit),
+                         data = thinDatNight)            
+        
+        # wolf-year only
+        wDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + (1|wolfYr), 
+                        family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                       data = thinDatDay)
+        wNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                         + (1|wolfYr), 
+                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = thinDatNight)        
+        
+        # wolf-year nested in pack
+        wpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + (1|Pack/wolfYr), 
+                        family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                       data = thinDatDay) 
+        wpNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                         + (1|Pack/wolfYr), 
+                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = thinDatNight)          
+        
 
-                
-                ## code from zuur book, don't bother
-                dResid <- resid(reDay, type = "pearson", scaled = "true")
-                nResid <- resid(reNight, type = "pearson", scaled = "true")
-                coplot(dResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                         slopeSt|snowSt + northnessSt|snowSt,
-                       data = datDay, ylab="Normalised residuals") 
-                coplot(nResid ~ slopeSt + lcClass + elevSt + northnessSt + snowSt + 
-                         slopeSt|snowSt + northnessSt|snowSt,
-                       data = datDay, ylab="Normalised residuals")
-
-              
-
-
-              
-              
-
+      #### Compete models ####
+        
+        AIC(noreDay, wDay, wpDay) # day: wolf nested in pack
+        AIC(noreNight, wNight, wpNight) # night: wolf nested in pack
+          
+          
                    
+################################################################################################## #  
+                
+    
+    
+### ### ### ### ### ### ### ### ### ### ### ### ##
+####   | DETERMINE FIXED EFFECTS STRUCTURE |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ##  
+            
+            
+      #### Specify global models ####
+        
+        globDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                         + (1|Pack/wolfYr), 
+                          family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = thinDatDay) 
+        globNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                           + (1|Pack/wolfYr), 
+                           family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatNight) 
+            
+        
+      #### Evaluate relative covariate importance ####
+        
+
+        
+        ## day ##
+
+           summary(globDay)
+           
+          # remove snow:northness and snow:northness^2
+          day2 <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt 
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatDay) 
+          BIC(day2, globDay) # day2 ftw
+          summary(day2)          
+          
+          # remove landcover type
+          day3 <- glmer(Used ~ 1 + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt 
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatDay) 
+          BIC(day2, day3) # day2 ftw   
+          roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day3), plot = F, print.auc = T) # 0.69         
+              
+          # replace landcover; remove canopy 
+          day4 <- glmer(Used ~ 1 + lcClass + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:slopeSt 
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatDay) 
+          BIC(day2, day4) # day2 ftw 
+          roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day4), plot = F, print.auc = T) # 0.6905
+          
+                  
+          # replace landcover; remove just canopy interaction
+          day5 <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:slopeSt 
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatDay) 
+          BIC(day2, day5) # day2 ftw    
+          roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day5), plot = F, print.auc = T) # 0.6907
+                  
+          # back to day2 but remove interactions with quadratic effects 
+          day6 <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatDay)     
+          BIC(day2, day6) # day2 ftw
+          roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day6), plot = F, print.auc = T) # 0.6919
+          
+          
+          # rolling with day2 for now. only unsupported covariate is one of the landcover classes
+          roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day2), plot = F, print.auc = T) # 0.693
+                  
+
+        
+        ## night ##  
+          
+          summary(globNight)
+        
+          # remove snow:northness^2
+          night2 <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                           + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatNight) 
+          BIC(night2, globNight) # night2 ftw  
+          roc(factor(ifelse(thinDatNight$Used == 1, 1, 0)), fitted(night2), plot = F, print.auc = T) # 0.7551
+          summary(night2)
+        
+        
+          # also remove snow:slope^2
+          night3 <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                           + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatNight) 
+          BIC(night2, night3) # night3 ftw
+          roc(factor(ifelse(thinDatNight$Used == 1, 1, 0)), fitted(night3), plot = F, print.auc = T) # 0.755
+          summary(night3)
+
+                
+          # and remove everything else about slope
+          night4 <- glmer(Used ~ 1 + lcClass + canSt + elevSt + northnessSt + snowSt
+                           + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:northnessSt
+                           + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatNight) 
+          BIC(night3, night4) # night3 ftw
+          roc(factor(ifelse(thinDatNight$Used == 1, 1, 0)), fitted(night4), plot = F, print.auc = T) # 0.7533
+
+          # back to night3 but remove lc
+          night5 <- glmer(Used ~ 1 + canSt + slopeSt + elevSt + northnessSt + snowSt
+                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                           + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                           + snowSt:I(elevSt*elevSt) 
+                           + (1|Pack/wolfYr), 
+                            family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                           data = thinDatNight)    
+          BIC(night3, night5) # night3 ftw. rolling with it
+          roc(factor(ifelse(thinDatNight$Used == 1, 1, 0)), fitted(night5), plot = F, print.auc = T) # 0.7485
+        
+          
+                
 ################################################################################################## #  
   
     
     
-### ### ### ### ### ### ### ### ### ### ### ### ###
-####   | DETERMINE ENVIRONMENTAL COVARIATES |  ####
-### ### ### ### ### ### ### ### ### ### ### ### ###        
+### ### ### ### ### ### ### ### #
+####   | ASSESS MODEL FIT |  ####
+### ### ### ### ### ### ### ### #    
         
         
-        # remember to use ML not REML for this
-                
-                
-                
-                
-                
-                
-                
-                
-                
+        ## binned residual plots ##
         
-        
+          # day - whole model
+          binnedplot(fitted(day2), residuals(day2, type = "response"), main = "Day - full model")
+          
+          # day - individual covariates
+          binnedplot(thinDatDay$canSt, residuals(day2, type = "response"), main = "Day - canopy")
+          binnedplot(thinDatDay$slopeSt, residuals(day2, type = "response"), main = "Day - slope")
+          binnedplot(thinDatDay$elevSt, residuals(day2, type = "response"), main = "Day - elevation")
+          binnedplot(thinDatDay$northnessSt, residuals(day2, type = "response"), main = "Day - northness")
+          binnedplot(thinDatDay$snowSt, residuals(day2, type = "response"), main = "Day - snow")   
+          
+          # night - whole model
+          binnedplot(fitted(night3), residuals(night3, type = "response"), main = "Night - full model")
+          
+           work
+           # night - individual covariates
+          binnedplot(thinDatNight$canSt, residuals(night3, type = "response"), main = "Night - canopy")
+          binnedplot(thinDatNight$slopeSt, residuals(night3, type = "response"), main = "Night - slope")
+          binnedplot(thinDatNight$elevSt, residuals(night3, type = "response"), main = "Night - elevation")
+          binnedplot(thinDatNight$northnessSt, residuals(night3, type = "response"), main = "Night - northness")
+          binnedplot(thinDatNight$snowSt, residuals(night3, type = "response"), main = "Night - snow")           
+          
+
+        ## area under the roc curve ##
+          
+          # day
+          invisible(plot(roc(factor(ifelse(thinDatDay$Used == 1, 1, 0)), fitted(day2)), 
+                         print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.693
+          
+          # night
+          invisible(plot(roc(factor(ifelse(thinDatNight$Used == 1, 1, 0)), fitted(night3)), 
+                         print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.755          
+          
+          
+        ## predictive accuracy @ >50% ##  
+          
+          # day
+          confusionMatrix(factor(as.character(ifelse(fitted(day2) > 0.5, "Yes", "No"))), 
+                          factor(ifelse(thinDatDay$Used == 1, "Yes", "No")), positive = "Yes") # 63.91% 
+          
+          # night
+          confusionMatrix(factor(as.character(ifelse(fitted(night3) > 0.5, "Yes", "No"))), 
+                          factor(ifelse(thinDatNight$Used == 1, "Yes", "No")), positive = "Yes") # 69.12%           
+          
+          
+         
+                  
 ################################################################################################## #  
               
               
@@ -386,13 +533,117 @@ rm(wd_kjb, wd_greg)
         save.image("prelimGlobalModels.RData")
    
         
-        #### extracting and visualizing global model output ####
+
         
-        summary(globDay)
-        summary(globNight)
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ###  ### ### ### ### ### 
+####   | VISUALIZE MODEL RESULTS |  ####
+### ### ### ### ###  ### ### ### ### ### 
+        
+        
+      #### create dataframe of things to plot ####
+        
+        d <- thinDatDay %>%
+          mutate(
+            prWolf = fitted(day2),
+            model = "Day")
+
+        
+        n <- thinDatNight %>%
+          mutate(
+            prWolf = fitted(night3),
+            model = "Night")
+        
+        dn <- bind_rows(d, n) 
+        
+        
+      #### probabilities ####          
+        
+        
+      #### linear terms ####    
+        
+        # snow
+        ggplot(dn, aes(x = snowCm, y = Used, colour = model)) +
+          geom_point(colour = "black") +
+          stat_smooth(aes(x = snowCm, y = prWolf)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(y = "Pr(Use)", title = "Snow Depth (cm)")    
+        
+        # canopy
+        ggplot(dn, aes(x = can, y = Used, colour = model)) +
+          geom_point(colour = "black") +
+          stat_smooth(aes(x = can, y = prWolf)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(y = "Pr(Use)", title = "Canopy cover (%)")          
         
         
         
+      #### quadratic terms ####
+        
+        # slope
+        ggplot(dn, aes(x = slope, y = Used, colour = model)) +
+          geom_point(colour = "black") +
+          stat_smooth(aes(x = slope, y = prWolf), method = "lm", formula = y ~ poly(x, 2)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Not Raw") 
+        
+        # elev
+        ggplot(dn, aes(x = elev, y = Used, colour = model)) +
+          geom_point(colour = "black") +
+          stat_smooth(aes(x = elev, y = prWolf), method = "lm", formula = y ~ poly(x, 2)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Elevation")
+        
+        # northness
+        ggplot(dn, aes(x = northness, y = Used, colour = model)) +
+          geom_point(colour = "black") +
+          stat_smooth(aes(x = northness, y = prWolf), method = "lm", formula = y ~ poly(x, 2)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Northness")        
+        
+        
+        
+      #### linear interactions ####        
+        
+        # considering snow depth >200cm "high" based on smoothed plot
+        dn$snowLev = ifelse(dn$snowCm > 200, "Deep snow", "Shallower snow")
+        
+        # canopy
+        ggplot(dn, aes(colour = model)) +
+          stat_smooth(aes(x = can, y = prWolf, linetype = snowLev), method = "lm", formula = y ~ x) +
+          coord_cartesian(ylim = c(0.2, 0.8)) +
+          labs(title = "Canopy cover (%)")          
+        
+        # slope (night only - in day the interaction doesn't affect the quadratic)
+        ggplot(filter(dn, model == "Night"), aes(x = slope, y = Used)) +
+          geom_point(col = "black") +
+          stat_smooth(aes(x = slope, y = prWolf, linetype = snowLev), method = "lm", formula = y ~ x) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Slope - Nighttime")
+          # not terribly compelling
+        
+        
+      #### quadratic interactions ####  
+        
+        # elevation (day and night)
+        ggplot(dn, aes(x = elev, y = Used, colour = model)) +
+          geom_point(col = "black") +
+          stat_smooth(aes(x = elev, y = prWolf, linetype = snowLev), method = "lm", formula = y ~ poly(x, 2)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Elevation")
+        
+        
+        # slope (day only - but consider combining with the linear night plot)
+        ggplot(filter(dn, model == "Day"), aes(x = slope, y = Used)) +
+          geom_point(col = "black") +
+          stat_smooth(aes(x = slope, y = prWolf, linetype = snowLev), method = "lm", formula = y ~ poly(x, 2)) +
+          coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Slope - Daytime")
+
+save.image("modelPlots-beforeFixingLc.RData")        
         
 ################################################################################################## #  
   
@@ -408,27 +659,27 @@ rm(wd_kjb, wd_greg)
         # also don't forget to delete Wald for final product (it's fast but inaccurate)
         
         dDay <- round(exp(data.frame(
-          OR = fixef(reDay),
-          ciLow = confint(reDay, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(reDay, parm = "beta_", method = "Wald")[,2])), 3)
+          OR = fixef(day2),
+          ciLow = confint(day2, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(day2, parm = "beta_", method = "Wald")[,2])), 3)
         dDay$Covariate = rownames(dDay)
         dDay$timing = "day"
         dNight <- round(exp(data.frame(
-          OR = fixef(reNight),
-          ciLow = confint(reNight, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(reNight, parm = "beta_", method = "Wald")[,2])), 3)
+          OR = fixef(night3),
+          ciLow = confint(night3, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(night3, parm = "beta_", method = "Wald")[,2])), 3)
         dNight$Covariate = rownames(dNight)
         dNight$timing = "night"
         dBoth <- rbind(dDay, dNight)
 
         # remove Pack and Intercept
-        dBothSub <- filter(dBoth, !grepl("Pack|Intercept", Covariate))
+        dBothSub <- filter(dBoth, !grepl("Pack|Intercept|\\*|\\:", Covariate))
         
         # order covariates more intuitively across x-axis
         dBothSub2 <- dBothSub %>%
           filter(!grepl("lc", Covariate)) %>%
           mutate(Covariate = factor(Covariate, 
-            levels=c("elevSt", "northnessSt", "slopeSt", "snowSt", 
+            levels=c("elevSt", "canSt", "northnessSt", "slopeSt", "snowSt", 
                      "I(slopeSt * snowSt)", "I(northnessSt * snowSt)")))
         
         # plot OR +- 95%CI colored by day/night - continuous covariates
