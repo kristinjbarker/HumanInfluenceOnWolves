@@ -534,10 +534,9 @@
               wDates <- unique(wLocs$Date)
               wTimes <- unique(wLocs$Time)
   
-              # calculate number of random locations to generate (5:1 used:avail)
-              wNLocs <- NROW(wLocs)
-              nRndm <- wNLocs * 5
-              
+              # calculate number of random locations to generate (1:1 used:avail)
+              nRndm <- NROW(wLocs)
+
               # identify HR (available area) to sample from
               wHR <- wolfYrsHRs[which(wolfYrsHRs@data$id == w),]
               
