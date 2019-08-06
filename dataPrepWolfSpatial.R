@@ -105,7 +105,7 @@
       # remove "AEA" from raster names
       names(rast) <- substr(names(rast), 4, nchar(names(rast)))
     
-      # snow (snow water equivalence from snotel sites in study area)
+      # snow (snow depth and snow water equivalence from snotel sites in study area)
       snowRaw <- read.csv(paste0(datDir, "/Environment/snowDat_2005-2019.csv"))
     
       
@@ -326,7 +326,7 @@
       # find the snotel site closest in elevation
       iSta <- stations[which(abs(stations$elevM-iElev)==min(abs(stations$elevM-iElev))), "staAbbv"]
       
-      # if prior to XXXX and closest snotel site was granite, use gros ventre instead (next closest in elev) 
+      # if prior to jan 2013 and closest snotel site was granite, use gros ventre instead (next closest in elev) 
       iStaUpd <- ifelse(iSta == "gc" & iDate <= "2013-01-01", "gv", paste(iSta))
       
       # find value for that site and date
@@ -384,14 +384,18 @@
         
         # map factor levels to access type
         recTypes$recNum <- ifelse(
-          recTypes$mapCol == "Blue", 3, 
-          ifelse(recTypes$mapCol == "Light Purple", 2, 1))
-        recTypes$recClass = ifelse(
-          recTypes$recNum == 3, "AllOT",
-          ifelse(recTypes$recNum == 2, "NoSledOT", "NoOT"))
+          recTypes$mapCol == "Blue", 1, 
+            ifelse(recTypes$mapCol == "Dark Purple", 2, 
+              ifelse(recTypes$mapCol == "Light Purple", 3, 4)))
+        recTypes$recClass <- ifelse(
+          recTypes$recNum == 4, "noRec",
+            ifelse(recTypes$recNum == 1, "allRec",
+              ifelse(recTypes$recNum == 2, "noOT", "noMoto")))
+
     
         # add recreation classification info to model data
-        modDat <- left_join(modDat, recTypes, by = c("rec" = "recNum"))        
+        modDat <- left_join(modDat, recTypes, by = c("rec" = "recNum"))   
+        modDat$recClass <- ifelse(is.na(modDat$recClass), "private", modDat$recClass)
         
         
         
