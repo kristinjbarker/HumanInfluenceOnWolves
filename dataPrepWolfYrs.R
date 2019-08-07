@@ -329,6 +329,9 @@
 
         #### format data before looping through each individual ####
         
+            # set new dataframe for combined data with above
+            locsAll <- locsAllPrelim
+        
             # fix that wolfID...
             locsMe <- rawMe
             locsMe$wolfID <- ifelse(locsMe$wolfID == "1983F", "983F", paste(locsMe$wolfID))
@@ -404,7 +407,7 @@
 
           
           # add to master dataframe
-          locsAll <- rbind(locsAllPrelim, iDat)
+          locsAll <- rbind(locsAll, iDat)
           
           
           # recreate blank dataframe for next loop (not really necessary)
