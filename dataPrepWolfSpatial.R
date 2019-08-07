@@ -388,14 +388,13 @@
             ifelse(recTypes$mapCol == "Dark Purple", 2, 
               ifelse(recTypes$mapCol == "Light Purple", 3, 4)))
         recTypes$recClass <- ifelse(
-          recTypes$recNum == 4, "noRec",
-            ifelse(recTypes$recNum == 1, "allRec",
-              ifelse(recTypes$recNum == 2, "noOT", "noMoto")))
+          recTypes$recNum == 4 | recTypes$recNum == 2, "noOT",
+            ifelse(recTypes$recNum == 1, "allOT", "nomotoOT"))
 
     
         # add recreation classification info to model data
         modDat <- left_join(modDat, recTypes, by = c("rec" = "recNum"))   
-        modDat$recClass <- ifelse(is.na(modDat$recClass), "private", modDat$recClass)
+        modDat$recClass <- ifelse(is.na(modDat$recClass), "noRec", modDat$recClass)
         
         
         
