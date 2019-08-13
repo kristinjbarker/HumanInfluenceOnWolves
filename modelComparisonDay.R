@@ -101,7 +101,7 @@ rm(wd_kjb, wd_greg)
       distRdSt = (distRd - mean(distRd))/sd(distRd),
       distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
       distFeedSt = (distFeed - mean(distFeed))/sd(distFeed),
-      activeFeedSt = (activeFeed - mean(activeFeed))/sd(activeFeed),
+      activeFeedSt = (distFeedActive - mean(distFeedActive))/sd(distFeedActive),
       # order landcover from most to least available
       lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
       # order rec from most to least regulated, relative to private land as baseline
@@ -1020,7 +1020,7 @@ rm(wd_kjb, wd_greg)
           d159 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(activeFeedSt^2)
                        + tContHunt*canSt)
-           
+
           # linear, all feedgrounds
           d160 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
                        + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt)
