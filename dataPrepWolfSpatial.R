@@ -120,6 +120,8 @@
       # feedgrounds
       feedLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
       feedAEA <- spTransform(feedLL, aea)
+      feedActiveLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsActiveManualLL')
+      feedActiveAEA <- spTransform(feedActiveLL, aea)
       
       # structures
       strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
@@ -198,20 +200,25 @@
         # calc distance to all feedgrounds
         distFeedRaw <- gDistance(locsAEA, feedAEA, byid = TRUE)
         
-        # identify the closest feedground (shortest distance)
+        # identify the closest of any feedground (shortest distance)
         distFeedMin <- apply(distFeedRaw, 2, min)
-        
-        # identify whether it's a feedground that always active
-        whichFeedMin <- apply(distFeedRaw, 2, which.min)
-        
+
         # make it longform
         distFeed <- data.frame(
           rowNum = names(distFeedMin),
-          distFeed = distFeedMin,
-          activeFeed = whichFeedMin)
+          distFeed = distFeedMin)
         
-        # note that alkali (0) and fish creek (2) aren't always active
-        distFeed$activeFeed <- ifelse(distFeed$activeFeed == 0 | distFeed$activeFeed == 2, 0, 1)
+        # calc distance to consistently-active feedgrounds
+        distFeedActiveRaw <- gDistance(locsAEA, feedActiveAEA, byid = TRUE)
+        
+        # identify the closest of any feedground (shortest distance)
+        distFeedActiveMin <- apply(distFeedActiveRaw, 2, min)
+
+        # make it longform
+        distFeedActive <- data.frame(
+          rowNum = names(distFeedActiveMin),
+          distFeedActive = distFeedActiveMin)
+ 
 
 
       ## Structures ## 
@@ -288,6 +295,7 @@
           mutate(rowNum = rownames(locsAEA@data)) %>%
           left_join(distRd, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
+          left_join(distFeedActive, by = "rowNum") %>%
           left_join(distStruc, by = "rowNum") # %>%
           # left_join(distPrey, by = "rowNum")
    
@@ -352,11 +360,11 @@
     #### combine all covariate data ####
     
       modDatRaw <- distDat %>%
-        dplyr::select(c(rowNum, distRd, distFeed, activeFeed, distStruc)) %>% # , distPrey)) %>%
+        dplyr::select(c(rowNum, distRd, distFeed, distFeedActive, distStruc)) %>% # , distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, snowCm, 
-                        distRd, distFeed, activeFeed, distStruc, # distPrey, 
+                        distRd, distFeed, distFeedActive, distStruc, # distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum))
       
