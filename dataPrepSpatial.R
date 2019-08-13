@@ -146,12 +146,13 @@
     
     #### Combine and export ####
      
-      # export landCov as shp also (to keep classified values, hopefully)
-      lcSp <- SpatialPolygonsDataFrame(lcCrop)
-      writeOGR(lcCrop, paste0(datDir, "/Land/LandcoverType"),
-                 layer = "lcType_cropped",
-                 driver = "ESRI Shapefile",
-                 overwrite_layer = TRUE)
+      # # export landCov as shp also (to keep classified values, hopefully)
+      # # NO THIS DOESN'T WORK AND I'M NOT DEDICATING TIME TO FIX IT RIGHT NOW
+      # lcSp <- SpatialPolygonsDataFrame(lcCrop)
+      # writeOGR(lcCrop, paste0(datDir, "/Land/LandcoverType"),
+      #            layer = "lcType_cropped",
+      #            driver = "ESRI Shapefile",
+      #            overwrite_layer = TRUE)
       
       
       # stack
