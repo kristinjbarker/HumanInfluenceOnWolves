@@ -124,10 +124,7 @@ rm(wd_kjb, wd_greg)
     
     #### split day/night ####
     
-    datDay <- filter(modDat, daytime == "day")
-    datNight <- filter(modDat, daytime == "night")    
-    
-
+    modDatDay <- filter(modDat, daytime == "day")
 
     
 ################################################################################################## #  
@@ -145,20 +142,8 @@ rm(wd_kjb, wd_greg)
                      + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
                      + (1|Pack/wolfYr), 
                       family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
-                     data = datDay) 
+                     data = modDatDay) 
 
-    
-      # nighttime (from dataExploration.R)
-      envtNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt 
-                       + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + (1|Pack/wolfYr), 
-                       family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
-                       data = datNight)    
-  
-
-          
                   
 ################################################################################################## #  
   
@@ -166,7 +151,8 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### #### #
 #### | LANDSCAPE SHIELD MODELS |  ####
 ### ### ### ### ### ### ### ### #### #
-      
+
+    #### models ####      
 
       # roads & buildings, linear
       d1 <- update(envtDay, . ~ . + distRdSt + distStrucSt)
@@ -180,6 +166,33 @@ rm(wd_kjb, wd_greg)
       # buildings only, quadratic
       d4 <- update(envtDay, . ~ . + distStrucSt + I(distStrucSt^2))
 
+  #### competition ####
+      
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayLSM.csv", row.names = FALSE)      
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topLSMs <- list()
+      # list model names
+      topLSMnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topLSMnames)) { topLSMs[[i]] <- get(topLSMnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()
       
       
 ################################################################################################## #  
@@ -292,7 +305,35 @@ rm(wd_kjb, wd_greg)
             
       
       
+
+  #### competition ####
       
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayDSM.csv", row.names = FALSE)
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topDSMs <- list()
+      # list model names
+      topDSMnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topDSMnames)) { topDSMs[[i]] <- get(topDSMnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()
+            
       
 ################################################################################################## #  
   
@@ -510,7 +551,34 @@ rm(wd_kjb, wd_greg)
           # canopy (i.e., hiding cover/escape terrain) only
           d67 <- update(envtDay, . ~ . + hunt*canSt)
       
+
+  #### competition ####
       
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayTSMA.csv", row.names = FALSE)      
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topTSMAs <- list()
+      # list model names
+      topTSMAnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topTSMAnames)) { topTSMAs[[i]] <- get(topTSMAnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()      
       
 ################################################################################################## #  
   
@@ -728,7 +796,38 @@ rm(wd_kjb, wd_greg)
           
           # canopy (i.e., hiding cover/escape terrain) only
           d107 <- update(envtDay, . ~ . + prevHunt*canSt)          
+
+          
+          
+  #### competition ####
       
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayTSMB.csv", row.names = FALSE)      
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topTSMBs <- list()
+      # list model names
+      topTSMBnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topTSMBnames)) { topTSMBs[[i]] <- get(topTSMBnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()      
+             
+                
 ################################################################################################## #  
   
     
@@ -943,7 +1042,37 @@ rm(wd_kjb, wd_greg)
           
           
           # canopy (i.e., hiding cover/escape terrain) only
-          d147 <- update(envtDay, . ~ . + tSinceHunt*canSt)          
+          d147 <- update(envtDay, . ~ . + tSinceHunt*canSt)  
+          
+          
+  #### competition ####
+      
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      # ... and store
+      write.csv(aicDay, file = "aicDayTSMC.csv", row.names = FALSE)      
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topTSMCs <- list()
+      # list model names
+      topTSMCnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topTSMCnames)) { topTSMCs[[i]] <- get(topTSMCnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()      
+             
       
 ################################################################################################## #  
   
@@ -1161,7 +1290,34 @@ rm(wd_kjb, wd_greg)
           # canopy (i.e., hiding cover/escape terrain) only
           d187 <- update(envtDay, . ~ . + tContHunt*canSt)        
           
-          
+  #### competition ####
+      
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayTSMD.csv", row.names = FALSE)      
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topTSMDs <- list()
+      # list model names
+      topTSMDnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topTSMDnames)) { topTSMDs[[i]] <- get(topTSMDnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()      
+             
       
 ################################################################################################## #  
   
@@ -1183,20 +1339,254 @@ rm(wd_kjb, wd_greg)
       d191 <- update(envtDay, . ~ . + activeFeedSt + I(activeFeedSt^2))
       
       
+  #### competition ####
       
+      # create list to store current subset of models in
+      modsDay <- list()
+      # list model names
+      modNamesDay <- ls(envir = .GlobalEnv, pattern = "^d[0-9]{1,5}") 
+      # store the models in the list
+      for (i in 1:length(modNamesDay)) { modsDay[[i]] <- get(modNamesDay[i]) }
+      # create a dataframe of aicc results...
+      aicDay <- data.frame(aictab(cand.set = modsDay, modnames = modNamesDay))
+      # ...sorted from smallest to largest aicc value...
+      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
+      # ... and store
+      write.csv(aicDay, file = "aicDayRSM.csv", row.names = FALSE)      
+      # identify best-supported models (deltaAICc < 2)
+      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
+      aic2Day$Modnames <- as.character(aic2Day$Modnames)
+      # save top-supported models
+      topRSMs <- list()
+      # list model names
+      topRSMnames <- unique(aic2Day$Modnames)
+      # store the models in the list
+      for (i in 1:length(topRSMnames)) { topRSMs[[i]] <- get(topRSMnames[i]) }      
+      # delete unsupported models and clear memory for next batch
+      rm(list = ls(pattern = "^d[0:9]*"))
+      gc()      
+         
       
 ################################################################################################## #  
- 
-      
-      save.image("modelsHumanDay.RData") 
-      
-      
+
     
 ### ### ### ### ### ### ### ### 
 #### | MODEL COMPARISON |  ####
 ### ### ### ### ### ### ### ###      
       
       
+      # list all supported models and their names
+      topMods <- c(topLSMs, topDSMs, topTSMAs, topTSMBs, topTSMCs, topTSMDs, topRSMs, envtDay)
+      names(topMods) <- c(topLSMnames, topDSMnames, topTSMAnames, topTSMBnames,
+                          topTSMCnames, topTSMDnames, topRSMnames, "envtDay")
+      
+      # dataframe of aicc results...
+      aicAll <- data.frame(aictab(cand.set = topMods, modnames = names(topMods)))
+      
+      # ...sorted from smallest to largest aicc value...
+      aicAll <- aicAll[order(aicAll$Delta_AICc), ]
+      
+      # .. and exported
+      write.csv(aicAll, "aic-day.csv", row.names=F)
+      
+      # store and export subset of moderately-supported models (deltaAICc < 4)
+      aic4All <- subset(aicAll, Delta_AICc < 4.0); aic4All <- droplevels(aic4All)
+      write.csv(aic4All, "aic4-day.csv", row.names=F)
+      
+      # store and export subset of best-supported models (deltaAICc < 2)
+      aic2All <- subset(aicAll, Delta_AICc < 2.0); aic2All <- droplevels(aic2All)
+      write.csv(aic2All, "aic2-day.csv", row.names=F)  
+      
+      # view top-supported models
+      topAllMat <- matrix(aic2All$Modname)
+      # print summaries of all supported models 
+      apply(topAllMat, 1, get)
+      # store the top model
+      topDay <- apply(topAllMat, 1, get)[[1]]
+      
+      
+      # check bic too, just to be thorough
+      
+        # dataframe of bic results...
+        bicAll <- data.frame(bictab(cand.set = topMods, modnames = names(topMods)))
+        # ...sorted from smallest to largest bicc value...
+        bicAll <- bicAll[order(bicAll$Delta_BIC), ]
+        # .. and exported
+        write.csv(bicAll, "bic-day.csv", row.names=F)      
       
 ################################################################################################## #  
+
+      
+      save.image("modelsHumanDay.RData") 
+      
+################################################################################################## # 
+      
+    
+### ### ### ### ### ### ### ### ###
+#### | TOP MODEL DIAGNOSTICS|  ####
+### ### ### ### ### ### ### ### ###   
+      
+      summary(topDay)
+    
+      ## area under the roc curve ##
+      invisible(plot(roc(factor(ifelse(modDatDay$Used == 1, 1, 0)), fitted(topDay)), 
+                     print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.734
+      
+      ## predictive accuracy @ >50% ##  
+      confusionMatrix(factor(as.character(ifelse(fitted(topDay) > 0.5, "Yes", "No"))), 
+                      factor(ifelse(modDatDay$Used == 1, "Yes", "No")), positive = "Yes") # 68% 
+    
+      
+      ## binned residual plots ##
+      binnedplot(fitted(topDay), residuals(topDay, type = "response"), main = "Day - top model")
+      
+      
+################################################################################################## # 
+      
+    
+### ### ### ### ### ### ### ### ##
+#### | VISUALIZING RESULTS |  ####
+### ### ### ### ### ### ### ### ##  
+      
+      
+      
+      #### create dataframe of things to plot ####
         
+        d <- modDatDay %>%
+          mutate(
+            prWolf = fitted(topDay),
+            model = "Day",
+            prevHunt = as.factor(prevHunt))
+
+      
+      
+      
+      #### quadratic interactions ####  
+        
+        # feedgrounds (previous year hunting y/n)
+        pFeed <- ggplot(d, aes(x = distFeed, y = prWolf, colour = prevHunt)) +
+          stat_smooth(aes(linetype = prevHunt), method = "lm", formula = y ~ poly(x, 2)) +
+          # coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Distance to Feedgrounds")
+        
+        # canopy (previous year hunting y/n)
+        pCan <- ggplot(d, aes(x = can, y = prWolf, colour = prevHunt)) +
+          stat_smooth(aes(linetype = prevHunt), method = "lm", formula = y ~ poly(x, 2)) +
+          # coord_cartesian(ylim = c(0, 1)) +
+          labs(title = "Canopy cover")
+        
+        
+        
+      #### odds ratios: categorical covariates (recreation) ####
+        
+        # dataframe of odds ratios and confidence intervals 
+        # KRISTIN delete Wald for final product (it's fast but inaccurate)
+        dDay <- round(exp(data.frame(
+          OR = fixef(topDay),
+          ciLow = confint(topDay, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(topDay, parm = "beta_", method = "Wald")[,2])), 3)
+        dDay$Covariate = rownames(dDay)
+        
+        # create recreation-specific dataframe
+        recDay <- dDay %>%
+          filter(grepl("rec", Covariate)) %>%
+          mutate(prevHunt = as.factor(ifelse(grepl("prevHunt", Covariate) == T, 1, 0)),
+                 recType = ifelse(grepl("noOT", Covariate) == T, "No off-trail",
+                                  ifelse(grepl("allOT", Covariate) == T, "All off-trail",
+                                         "Non-moto off-trail"))) %>%
+          mutate(recType = factor(recType, levels = c("All off-trail", "Non-moto off-trail", "No off-trail")))
+
+
+        # plot OR +- 95%CI colored by hunt previous year
+        pLc <- ggplot(recDay, 
+                      aes(x = recType, y = OR, colour = prevHunt)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1)) +
+          labs(title = "Recreation", x = "(relative to private land)") #+
+         # scale_x_discrete(labels=c("Herbaceous","NoVeg","Riparian","Shrub"))
+      
+      
+################################################################################################## # 
+      
+    
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### | RE-RUNNING MODEL WITH DIFFERENT RECREATION BASELINES |  ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+        
+        
+    ## winter closure areas as baseline ##
+        
+        
+        # reorder factor and rerun model
+        modDatDay2 <- modDatDay %>%
+          mutate(recClass = factor(recClass, levels = c("noOT", "noRec", "nomotoOT", "allOT")))
+        topDay2 <- update(topDay, data = modDatDay2)
+        summary(topDay2)
+        
+        # new dataframe of model results
+        dDay2 <- round(exp(data.frame(
+          OR = fixef(topDay2),
+          ciLow = confint(topDay2, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(topDay2, parm = "beta_", method = "Wald")[,2])), 3)
+        dDay2$Covariate = rownames(dDay2)
+        
+        # create recreation-specific dataframe
+        recDay2 <- dDay2 %>%
+          filter(grepl("rec", Covariate)) %>%
+          mutate(prevHunt = as.factor(ifelse(grepl("prevHunt", Covariate) == T, 1, 0)),
+                 recType = ifelse(grepl("noRec", Covariate) == T, "No recreation",
+                                  ifelse(grepl("allOT", Covariate) == T, "All off-trail",
+                                         "Non-moto off-trail"))) %>%
+          mutate(recType = factor(recType, levels = c("All off-trail", "Non-moto off-trail", "No recreation")))
+
+
+        # plot OR +- 95%CI colored by hunt previous year
+        pLc2 <- ggplot(recDay2, 
+                      aes(x = recType, y = OR, colour = prevHunt)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1)) +
+          labs(title = "Recreation", x = "(relative to areas closed to off-trail recreation)") 
+        pLc2
+  
+              
+        
+    ## open recreation areas as baseline ##
+        
+        
+        # reorder factor and rerun model
+        modDatDay3 <- modDatDay %>%
+          mutate(recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
+        topDay3 <- update(topDay, data = modDatDay3)
+        summary(topDay3)
+        
+        # new dataframe of model results
+        dDay3 <- round(exp(data.frame(
+          OR = fixef(topDay3),
+          ciLow = confint(topDay3, parm = "beta_", method = "Wald")[,1],
+          ciHigh = confint(topDay3, parm = "beta_", method = "Wald")[,2])), 3)
+        dDay3$Covariate = rownames(dDay3)
+        
+        # create recreation-specific dataframe
+        recDay3 <- dDay3 %>%
+          filter(grepl("rec", Covariate)) %>%
+          mutate(prevHunt = as.factor(ifelse(grepl("prevHunt", Covariate) == T, "Yes", "No")),
+                 recType = ifelse(grepl("noRec", Covariate) == T, "No recreation",
+                                  ifelse(grepl("noOT", Covariate) == T, "No off-trail",
+                                         "Non-moto off-trail"))) %>%
+          mutate(recType = factor(recType, levels = c("Non-moto off-trail", "No off-trail", "No recreation")))
+
+
+        # plot OR +- 95%CI colored by hunt previous year
+        pLc3 <- ggplot(recDay3, aes(x = recType, y = OR, colour = prevHunt)) +
+          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
+          geom_point() +
+          geom_hline(aes(yintercept=1)) +
+          labs(title = "Recreation", x = "(Relative to open recreation areas)", 
+               color = "Hunted \nprevious \nyear") +
+          scale_x_discrete(labels=c("Non-motorized use \nallowed off-trail",
+                                    "Winter closure, \n off-trail prohibited",
+                                    "No recreation \n(private land)")) 
+        pLc3        
