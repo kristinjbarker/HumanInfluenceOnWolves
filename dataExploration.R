@@ -406,7 +406,7 @@ rm(wd_kjb, wd_greg)
       
         
           # rolling with night2 
-          roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(night2), plot = F, print.auc = T) # 0.758
+          roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(night2), plot = F, print.auc = T) # 0.7171
               
                 
           
