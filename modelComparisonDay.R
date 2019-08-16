@@ -1403,7 +1403,7 @@ rm(wd_kjb, wd_greg)
       # print summaries of all supported models 
       apply(topAllMat, 1, get)
       # store the top model
-      topDay <- apply(topAllMat, 1, get)[[1]]
+      topModDay <- apply(topAllMat, 1, get)[[1]]
       
       
       # check bic too, just to be thorough
@@ -1427,21 +1427,70 @@ rm(wd_kjb, wd_greg)
 #### | TOP MODEL DIAGNOSTICS|  ####
 ### ### ### ### ### ### ### ### ###   
       
-      summary(topDay)
+      summary(topModDay)
     
       ## area under the roc curve ##
-      invisible(plot(roc(factor(ifelse(modDatDay$Used == 1, 1, 0)), fitted(topDay)), 
+      invisible(plot(roc(factor(ifelse(modDatDay$Used == 1, 1, 0)), fitted(topModDay)), 
                      print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.734
       
       ## predictive accuracy @ >50% ##  
-      confusionMatrix(factor(as.character(ifelse(fitted(topDay) > 0.5, "Yes", "No"))), 
+      confusionMatrix(factor(as.character(ifelse(fitted(topModDay) > 0.5, "Yes", "No"))), 
                       factor(ifelse(modDatDay$Used == 1, "Yes", "No")), positive = "Yes") # 68% 
     
       
       ## binned residual plots ##
-      binnedplot(fitted(topDay), residuals(topDay, type = "response"), main = "Day - top model")
+      binnedplot(fitted(topModDay), residuals(topModDay, type = "response"), main = "Day - top model")
+
       
       
+
+    ## MAKE OPEN RECREATION AREA BASELINE (for easier plot interpretation) ##
+        
+        
+        # reorder factor and rerun model
+        modDatDay3 <- modDatDay %>%
+          mutate(recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
+        topDay3 <- update(topDay, data = modDatDay3)
+        summary(topDay3)
+# 
+#         
+#         # new dataframe of model results
+#         dDay3 <- round(exp(data.frame(
+#           OR = fixef(topDay3),
+#           ciLow = confint(topDay3, parm = "beta_", method = "Wald")[,1],
+#           ciHigh = confint(topDay3, parm = "beta_", method = "Wald")[,2])), 3)
+#         dDay3$Covariate = rownames(dDay3)
+#         dDay3 <- dDay3[order(dDay3$OR, decreasing = TRUE), ]
+#         write.csv(dDay3, "topModDay.csv", row.names = F)
+        
+     
+      ## extract and store top model results ##
+      
+          # name top model as such
+          topModDay <- topDay3
+          
+          # extract estimates from model summary
+          topDayEsts <- data.frame(
+            Model = "day",
+            Covariate = rownames(coef(summary(topModDay))),
+            Estimate = round(coef(summary(topModDay))[, "Estimate"], 3),
+            stdError = round(coef(summary(topModDay))[, "z value"], 3),
+            OR = round(exp(coef(summary(topModDay))[, "Estimate"]), 3),
+            pVal = coef(summary(topModDay))[, "Pr(>|z|)"])
+          topDayEsts$sig <- ifelse(topDayEsts$pVal <= 0.05, 1, 0)
+          
+          # estimate CIs separately bc not positive they map to correct covariate otherwise
+          topDayCIs <- data.frame(
+            ciLow = round(confint(topModDay, parm = "beta_", method = "Wald")[,1], 3),
+            ciHigh = round(confint(topModDay, parm = "beta_", method = "Wald")[,2], 3))
+          topDayCIs$Covariate <- rownames(topDayCIs)
+          
+          # combine estimates and CIs
+          topDay <- left_join(topDayEsts, topDayCIs, by = "Covariate")
+    
+          # export
+          write.csv(topDay, "topModDay.csv", row.names = F)
+              
 ################################################################################################## # 
       
     
@@ -1480,94 +1529,6 @@ rm(wd_kjb, wd_greg)
         
       #### odds ratios: categorical covariates (recreation) ####
         
-        # dataframe of odds ratios and confidence intervals 
-        # KRISTIN delete Wald for final product (it's fast but inaccurate)
-        dDay <- round(exp(data.frame(
-          OR = fixef(topDay),
-          ciLow = confint(topDay, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(topDay, parm = "beta_", method = "Wald")[,2])), 3)
-        dDay$Covariate = rownames(dDay)
-        
-        # create recreation-specific dataframe
-        recDay <- dDay %>%
-          filter(grepl("rec", Covariate)) %>%
-          mutate(prevHunt = as.factor(ifelse(grepl("prevHunt", Covariate) == T, 1, 0)),
-                 recType = ifelse(grepl("noOT", Covariate) == T, "No off-trail",
-                                  ifelse(grepl("allOT", Covariate) == T, "All off-trail",
-                                         "Non-moto off-trail"))) %>%
-          mutate(recType = factor(recType, levels = c("All off-trail", "Non-moto off-trail", "No off-trail")))
-
-
-        # plot OR +- 95%CI colored by hunt previous year
-        pLc <- ggplot(recDay, 
-                      aes(x = recType, y = OR, colour = prevHunt)) +
-          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
-          geom_point() +
-          geom_hline(aes(yintercept=1)) +
-          labs(title = "Recreation", x = "(relative to private land)") #+
-         # scale_x_discrete(labels=c("Herbaceous","NoVeg","Riparian","Shrub"))
-      
-      
-################################################################################################## # 
-      
-    
-### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-#### | RE-RUNNING MODEL WITH DIFFERENT RECREATION BASELINES |  ####
-### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        
-        
-    ## winter closure areas as baseline ##
-        
-        
-        # reorder factor and rerun model
-        modDatDay2 <- modDatDay %>%
-          mutate(recClass = factor(recClass, levels = c("noOT", "noRec", "nomotoOT", "allOT")))
-        topDay2 <- update(topDay, data = modDatDay2)
-        summary(topDay2)
-        
-        # new dataframe of model results
-        dDay2 <- round(exp(data.frame(
-          OR = fixef(topDay2),
-          ciLow = confint(topDay2, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(topDay2, parm = "beta_", method = "Wald")[,2])), 3)
-        dDay2$Covariate = rownames(dDay2)
-        
-        # create recreation-specific dataframe
-        recDay2 <- dDay2 %>%
-          filter(grepl("rec", Covariate)) %>%
-          mutate(prevHunt = as.factor(ifelse(grepl("prevHunt", Covariate) == T, 1, 0)),
-                 recType = ifelse(grepl("noRec", Covariate) == T, "No recreation",
-                                  ifelse(grepl("allOT", Covariate) == T, "All off-trail",
-                                         "Non-moto off-trail"))) %>%
-          mutate(recType = factor(recType, levels = c("All off-trail", "Non-moto off-trail", "No recreation")))
-
-
-        # plot OR +- 95%CI colored by hunt previous year
-        pLc2 <- ggplot(recDay2, 
-                      aes(x = recType, y = OR, colour = prevHunt)) +
-          geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
-          geom_point() +
-          geom_hline(aes(yintercept=1)) +
-          labs(title = "Recreation", x = "(relative to areas closed to off-trail recreation)") 
-        pLc2
-  
-              
-        
-    ## open recreation areas as baseline ##
-        
-        
-        # reorder factor and rerun model
-        modDatDay3 <- modDatDay %>%
-          mutate(recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
-        topDay3 <- update(topDay, data = modDatDay3)
-        summary(topDay3)
-        
-        # new dataframe of model results
-        dDay3 <- round(exp(data.frame(
-          OR = fixef(topDay3),
-          ciLow = confint(topDay3, parm = "beta_", method = "Wald")[,1],
-          ciHigh = confint(topDay3, parm = "beta_", method = "Wald")[,2])), 3)
-        dDay3$Covariate = rownames(dDay3)
         
         # create recreation-specific dataframe
         recDay3 <- dDay3 %>%
@@ -1589,4 +1550,11 @@ rm(wd_kjb, wd_greg)
           scale_x_discrete(labels=c("Non-motorized use \nallowed off-trail",
                                     "Winter closure, \n off-trail prohibited",
                                     "No recreation \n(private land)")) 
-        pLc3        
+        pLc3     
+       
+        
+   
+      
+################################################################################################## # 
+      
+    
