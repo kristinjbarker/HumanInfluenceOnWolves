@@ -104,8 +104,8 @@ rm(wd_kjb, wd_greg)
       activeFeedSt = (distFeedActive - mean(distFeedActive))/sd(distFeedActive),
       # order landcover from most to least available
       lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
-      # order rec from most to least regulated, relative to private land as baseline
-      recClass = factor(recClass, levels = c("noRec", "noOT", "nomotoOT", "allOT")),
+      # use open recreation as baseline; reorder for more intuitive plot interpretation
+      recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")),
       # add binary private land designation
       pvt = ifelse(recClass == "noRec", 1, 0),
       # add binary off-trail/no off-trail use designation
@@ -1441,37 +1441,12 @@ rm(wd_kjb, wd_greg)
       ## binned residual plots ##
       binnedplot(fitted(topModDay), residuals(topModDay, type = "response"), main = "Day - top model")
 
-      
-      
-
-    ## MAKE OPEN RECREATION AREA BASELINE (for easier plot interpretation) ##
-        
-        
-        # reorder factor and rerun model
-        modDatDay3 <- modDatDay %>%
-          mutate(recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
-        topDay3 <- update(topDay, data = modDatDay3)
-        summary(topDay3)
-# 
-#         
-#         # new dataframe of model results
-#         dDay3 <- round(exp(data.frame(
-#           OR = fixef(topDay3),
-#           ciLow = confint(topDay3, parm = "beta_", method = "Wald")[,1],
-#           ciHigh = confint(topDay3, parm = "beta_", method = "Wald")[,2])), 3)
-#         dDay3$Covariate = rownames(dDay3)
-#         dDay3 <- dDay3[order(dDay3$OR, decreasing = TRUE), ]
-#         write.csv(dDay3, "topModDay.csv", row.names = F)
-        
-     
-      ## extract and store top model results ##
-      
+ 
           # name top model as such
           topModDay <- topDay3
           
           # extract estimates from model summary
           topDayEsts <- data.frame(
-            Model = "day",
             Covariate = rownames(coef(summary(topModDay))),
             Estimate = round(coef(summary(topModDay))[, "Estimate"], 3),
             stdError = round(coef(summary(topModDay))[, "z value"], 3),
