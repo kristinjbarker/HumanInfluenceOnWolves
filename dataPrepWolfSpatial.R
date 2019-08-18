@@ -405,17 +405,6 @@
         modDat$recClass <- ifelse(is.na(modDat$recClass), "noRec", modDat$recClass)
         
         
-        
-    #### add hunting indicator ####
-        
-        # format year as number
-        modDat$Year <- as.integer(modDat$Year)
-        
-        # wy hunts occurred 2012-2013, 2017 on
-        modDat$hunt <- ifelse(modDat$Year == 2012 | modDat$Year == 2013 | 
-                              modDat$Year >= 2017, 1, 0)
-        
-    
     #### format aspect ####
         
         # translate to northness (continuous and binary) and make 0 if slope = 0
