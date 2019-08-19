@@ -112,14 +112,16 @@ rm(wd_kjb, wd_greg)
       otUse = ifelse(recClass == "noOT", 0, 1),
       # add binary designation for whether moto rec is allowed
       motoUse = ifelse(recClass == "allOT", 1, 0),
+      # add binary indicator of whether hunting was allowed that fall
+      hunt = ifelse(Year == 2013 | Year == 2014 | Year >= 2018, 1, 0),
       # add binary indication of whether hunting was allowed in the previous year
-      prevHunt = ifelse(Year == 2013 | Year == 2014 | Year >= 2018, 1, 0),
-      # add time since hunting was first allowed (2012)
-      tSinceHunt = ifelse(Year - 2012 + 1 < 0, 0, Year - 2012 + 1),
+      prevHunt = ifelse(Year == 2014 | Year == 2015 | Year >= 2019, 1, 0),
+      # add time since hunting was first allowed (fall 2012, corresponds to winter 2013)
+      tSinceHunt = ifelse(Year - 2013 + 1 < 0, 0, Year - 2013 + 1),
       # add years of continuous hunting (to account for no hunting 2014, 2015, 2016)
-      tContHunt = ifelse(Year == 2012, 1,
-                         ifelse(Year == 2013, 2,
-                                ifelse(Year >= 2017, Year - 2017 + 1, 0))))
+      tContHunt = ifelse(Year == 2013, 1,
+                         ifelse(Year == 2014, 2,
+                                ifelse(Year >= 2018, Year - 2018 + 1, 0))))
 
     
     #### split day/night ####
@@ -1442,8 +1444,7 @@ rm(wd_kjb, wd_greg)
       binnedplot(fitted(topModDay), residuals(topModDay, type = "response"), main = "Day - top model")
 
  
-          # name top model as such
-          topModDay <- topDay3
+
           
           # extract estimates from model summary
           topDayEsts <- data.frame(
