@@ -349,47 +349,47 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d28 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*activeFeedSt)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*activeFeedSt  - hunt)
           
           # linear, predictable feedgrounds, canopy
           d29 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*activeFeedSt
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
       
           # quadratic, predictable feedgrounds
           d30 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  hunt*distRdSt +  hunt*distStrucSt +  hunt*recClass +  hunt*activeFeedSt
-                       +  hunt*I(distRdSt^2) +  hunt*I(distStrucSt^2) +  hunt*I(activeFeedSt^2))
+                       +  hunt*I(distRdSt^2) +  hunt*I(distStrucSt^2) +  hunt*I(activeFeedSt^2) - hunt)
 
           # quadratic, predictable feedgrounds, canopy
           d31 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  hunt*distRdSt +  hunt*distStrucSt +  hunt*recClass +  hunt*activeFeedSt
                        +  hunt*I(distRdSt^2) +  hunt*I(distStrucSt^2) +  hunt*I(activeFeedSt^2)
-                       + hunt*canSt)
+                       + hunt*canSt - hunt)
       
           # linear, all feedgrounds
           d32 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt - hunt)
           
           # linear, all feedgrounds, canopy
           d33 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
       
           # quadratic, all feedgrounds
           d34 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
-                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2))
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2) - hunt)
           
           # quadratic, all feedgrounds, canopy
           d35 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
           
           
           
@@ -397,38 +397,38 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d36 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt)
+                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt - hunt)
           
           # linear, predictable feedgrounds, canopy
           d37 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt + hunt*canSt)          
+                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt + hunt*canSt - hunt)          
           
       
           # quadratic, predictable feedgrounds
           d38 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2))
+                       + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2) - hunt)
 
           # quadratic, predictable feedgrounds, canopy
           d39 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + hunt*distRdSt + hunt*recClass + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2)
-                       + hunt*canSt)
+                       + hunt*canSt - hunt)
       
           # linear, all feedgrounds
           d40 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt)
+                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt - hunt)
           
           # linear, all feedgrounds, canopy
           d41 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt + hunt*canSt)          
+                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt + hunt*canSt - hunt)          
       
           # quadratic, all feedgrounds
           d42 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2))
+                       + hunt*distRdSt + hunt*recClass + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2) - hunt)
           
           # quadratic, all feedgrounds, canopy
           d43 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*recClass + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2)
-                       + hunt*canSt)
+                       + hunt*canSt - hunt)
                     
       
       
@@ -438,47 +438,47 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d44 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*activeFeedSt)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*activeFeedSt - hunt)
           
           # linear, predictable feedgrounds, canopy
           d45 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*activeFeedSt
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
       
           # quadratic, predictable feedgrounds
           d46 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*activeFeedSt
-                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(activeFeedSt^2))
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(activeFeedSt^2) - hunt)
 
           # quadratic, predictable feedgrounds, canopy
           d47 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*activeFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(activeFeedSt^2)
-                       + hunt*canSt)
+                       + hunt*canSt - hunt)
       
           # linear, all feedgrounds
           d48 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*distFeedSt)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*distFeedSt - hunt)
           
           # linear, all feedgrounds, canopy
           d49 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*distFeedSt
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
       
           # quadratic, all feedgrounds
           d50 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*distFeedSt
-                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2))
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2) - hunt)
           
           # quadratic, all feedgrounds, canopy
           d51 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*motoUse + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
-                       + hunt*canSt)          
+                       + hunt*canSt - hunt)          
           
           
           
@@ -486,72 +486,72 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d52 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt)
+                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt - hunt)
           
           # linear, predictable feedgrounds, canopy
           d53 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt + hunt*canSt)          
+                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt + hunt*canSt - hunt)          
       
           # quadratic, predictable feedgrounds
           d54 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2))
+                       + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2) - hunt)
 
           # quadratic, predictable feedgrounds, canopy
           d55 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + hunt*distRdSt + hunt*motoUse + hunt*activeFeedSt + hunt*I(distRdSt^2) + hunt*I(activeFeedSt^2)
-                       + hunt*canSt)
+                       + hunt*canSt - hunt)
       
           # linear, all feedgrounds
           d56 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt)
+                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt - hunt)
           
           # linear, all feedgrounds, canopy
           d57 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt + hunt*canSt)          
+                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt + hunt*canSt - hunt)          
       
           # quadratic, all feedgrounds
           d58 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2)) 
+                       + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2) - hunt) 
           
           # quadratic, all feedgrounds, canopy
           d59 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + hunt*distRdSt + hunt*motoUse + hunt*distFeedSt + hunt*I(distRdSt^2) + hunt*I(distFeedSt^2)
-                       + hunt*canSt) 
+                       + hunt*canSt - hunt) 
       
 
         
       #### off-trail recreation - alone; with or without structures ####  
           
           # off-trail recreation only
-          d60 <- update(envtDay, . ~ . + otUse + hunt*otUse)
+          d60 <- update(envtDay, . ~ . + otUse + hunt*otUse - hunt)
           
           # off-trail recreation only, canopy
-          d61 <- update(envtDay, . ~ . + otUse + hunt*otUse + hunt*canSt)          
+          d61 <- update(envtDay, . ~ . + otUse + hunt*otUse + hunt*canSt - hunt)          
           
           # off-trail and structures, linear
-          d62 <- update(envtDay, . ~ . + otUse + distStrucSt + hunt*otUse + hunt*distStrucSt)
+          d62 <- update(envtDay, . ~ . + otUse + distStrucSt + hunt*otUse + hunt*distStrucSt - hunt)
           
           # off-trail and structures, linear, canopy
-          d63 <- update(envtDay, . ~ . + otUse + distStrucSt + hunt*otUse + hunt*distStrucSt + hunt*canSt)          
+          d63 <- update(envtDay, . ~ . + otUse + distStrucSt + hunt*otUse + hunt*distStrucSt + hunt*canSt - hunt)          
           
           # offtrail and structures, quadratic
           d64 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + hunt*otUse + hunt*distStrucSt + hunt*I(distStrucSt^2))
+                       + hunt*otUse + hunt*distStrucSt + hunt*I(distStrucSt^2) - hunt)
           
           # offtrail and structures, quadratic, canopy
           d65 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + hunt*otUse + hunt*distStrucSt + hunt*I(distStrucSt^2) + hunt*canSt)          
+                       + hunt*otUse + hunt*distStrucSt + hunt*I(distStrucSt^2) + hunt*canSt - hunt)          
           
           
     #### change use of landscape but not response to people ####       
           
           # all environment
           d66 <- update(envtDay, . ~ . + hunt:lcClass + hunt*can + hunt*slope + hunt*elev + hunt*northness
-                       + hunt*snowSt + hunt*I(slope^2) + hunt:I(elev^2) + hunt:I(northness^2))
+                       + hunt*snowSt + hunt*I(slope^2) + hunt:I(elev^2) + hunt:I(northness^2) - hunt)
           
           
           # canopy (i.e., hiding cover/escape terrain) only
-          d67 <- update(envtDay, . ~ . + hunt*canSt)
+          d67 <- update(envtDay, . ~ . + hunt*canSt - hunt)
       
 
   #### competition ####
@@ -595,47 +595,47 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d68 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*activeFeedSt)
+                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*activeFeedSt - prevHunt)
           
           # linear, predictable feedgrounds, canopy
           d69 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*activeFeedSt
-                       + prevHunt*canSt)
+                       + prevHunt*canSt - prevHunt)
           
           # quadratic, predictable feedgrounds
           d70 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  prevHunt*distRdSt +  prevHunt*distStrucSt +  prevHunt*recClass +  prevHunt*activeFeedSt
-                       +  prevHunt*I(distRdSt^2) +  prevHunt*I(distStrucSt^2) +  prevHunt*I(activeFeedSt^2))
+                       +  prevHunt*I(distRdSt^2) +  prevHunt*I(distStrucSt^2) +  prevHunt*I(activeFeedSt^2) - prevHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d71 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  prevHunt*distRdSt +  prevHunt*distStrucSt +  prevHunt*recClass +  prevHunt*activeFeedSt
                        +  prevHunt*I(distRdSt^2) +  prevHunt*I(distStrucSt^2) +  prevHunt*I(activeFeedSt^2)
-                       + prevHunt*canSt)
+                       + prevHunt*canSt - prevHunt)
           
           # linear, all feedgrounds
           d72 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*distFeedSt)
+                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*distFeedSt - prevHunt)
           
           # linear, all feedgrounds, canopy
           d73 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*distFeedSt
-                       + prevHunt*canSt)          
+                       + prevHunt*canSt - prevHunt)          
       
           # quadratic, all feedgrounds
           d74 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*distFeedSt
-                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2))
+                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2) - prevHunt)
           
           # quadratic, all feedgrounds, canopy
           d75 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*recClass + prevHunt*distFeedSt
                        + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2)
-                       + prevHunt*canSt)          
+                       + prevHunt*canSt - prevHunt)          
           
           
           
@@ -643,38 +643,42 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d76 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt)
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt - prevHunt)
           
           # linear, predictable feedgrounds, canopy
           d77 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*canSt)          
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*canSt - prevHunt)          
           
 
           # quadratic, predictable feedgrounds
           d78 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(activeFeedSt^2))
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(activeFeedSt^2) - prevHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d79 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(activeFeedSt^2)
-                       + prevHunt*canSt)
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(activeFeedSt^2)
+                       + prevHunt*canSt - prevHunt - prevHunt)
       
           # linear, all feedgrounds
           d80 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt)
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt - prevHunt)
           
           # linear, all feedgrounds, canopy
           d81 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*canSt)          
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*canSt - prevHunt)          
       
           # quadratic, all feedgrounds
           d82 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(distFeedSt^2))
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(distFeedSt^2) - prevHunt)
           
           # quadratic, all feedgrounds, canopy
           d83 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(distFeedSt^2)
-                       + prevHunt*canSt)
+                       + prevHunt*distRdSt + prevHunt*recClass + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(distFeedSt^2)
+                       + prevHunt*canSt - prevHunt)
                     
       
       
@@ -684,47 +688,47 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d84 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*activeFeedSt)
+                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*activeFeedSt - prevHunt)
           
           # linear, predictable feedgrounds, canopy
           d85 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*activeFeedSt
-                       + prevHunt*canSt)          
+                       + prevHunt*canSt - prevHunt)          
       
           # quadratic, predictable feedgrounds
           d86 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*activeFeedSt
-                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(activeFeedSt^2))
+                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(activeFeedSt^2) - prevHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d87 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*activeFeedSt
                        + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(activeFeedSt^2)
-                       + prevHunt*canSt)
+                       + prevHunt*canSt - prevHunt)
       
           # linear, all feedgrounds
           d88 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*distFeedSt)
+                       + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*distFeedSt - prevHunt)
           
           # linear, all feedgrounds, canopy
           d89 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*distFeedSt
-                       + prevHunt*canSt)          
+                       + prevHunt*canSt - prevHunt)          
       
           # quadratic, all feedgrounds
           d90 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*distFeedSt
-                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2))
+                       + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2) - prevHunt)
           
           # quadratic, all feedgrounds, canopy
           d91 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + prevHunt*distRdSt + prevHunt*distStrucSt + prevHunt*motoUse + prevHunt*distFeedSt
                        + prevHunt*I(distRdSt^2) + prevHunt*I(distStrucSt^2) + prevHunt*I(distFeedSt^2)
-                       + prevHunt*canSt)          
+                       + prevHunt*canSt - prevHunt)          
           
           
           
@@ -732,72 +736,76 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d92 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt)
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt - prevHunt)
           
           # linear, predictable feedgrounds, canopy
           d93 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*canSt)          
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*canSt - prevHunt)          
       
           # quadratic, predictable feedgrounds
           d94 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(activeFeedSt^2))
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(activeFeedSt^2) - prevHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d95 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(activeFeedSt^2)
-                       + prevHunt*canSt)
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*activeFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(activeFeedSt^2)
+                       + prevHunt*canSt - prevHunt)
       
           # linear, all feedgrounds
           d96 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt)
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt - prevHunt)
           
           # linear, all feedgrounds, canopy
           d97 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*canSt)          
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*canSt - prevHunt)          
       
           # quadratic, all feedgrounds
           d98 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(distFeedSt^2)) 
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(distFeedSt^2) - prevHunt) 
           
           # quadratic, all feedgrounds, canopy
           d99 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) + prevHunt*I(distFeedSt^2)
-                       + prevHunt*canSt) 
+                       + prevHunt*distRdSt + prevHunt*motoUse + prevHunt*distFeedSt + prevHunt*I(distRdSt^2) 
+                       + prevHunt*I(distFeedSt^2)
+                       + prevHunt*canSt - prevHunt) 
       
 
         
       #### off-trail recreation - alone; with or without structures ####  
           
           # off-trail recreation only
-          d100 <- update(envtDay, . ~ . + otUse + prevHunt*otUse)
+          d100 <- update(envtDay, . ~ . + otUse + prevHunt*otUse - prevHunt)
           
           # off-trail recreation only, canopy
-          d101 <- update(envtDay, . ~ . + otUse + prevHunt*otUse + prevHunt*canSt)          
+          d101 <- update(envtDay, . ~ . + otUse + prevHunt*otUse + prevHunt*canSt - prevHunt)          
           
           # off-trail and structures, linear
-          d102 <- update(envtDay, . ~ . + otUse + distStrucSt + prevHunt*otUse + prevHunt*distStrucSt)
+          d102 <- update(envtDay, . ~ . + otUse + distStrucSt + prevHunt*otUse + prevHunt*distStrucSt - prevHunt)
           
           # off-trail and structures, linear, canopy
-          d103 <- update(envtDay, . ~ . + otUse + distStrucSt + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*canSt)          
+          d103 <- update(envtDay, . ~ . + otUse + distStrucSt + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*canSt - prevHunt)          
           
           # offtrail and structures, quadratic
           d104 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*I(distStrucSt^2))
+                       + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*I(distStrucSt^2) - prevHunt)
           
           # offtrail and structures, quadratic, canopy
           d105 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*I(distStrucSt^2) + prevHunt*canSt)          
+                       + prevHunt*otUse + prevHunt*distStrucSt + prevHunt*I(distStrucSt^2) + prevHunt*canSt - prevHunt)          
           
           
     #### change use of landscape but not response to people ####       
           
           # all environment
           d106 <- update(envtDay, . ~ . + prevHunt:lcClass + prevHunt*can + prevHunt*slope + prevHunt*elev + prevHunt*northness
-                       + prevHunt*snowSt + prevHunt*I(slope^2) + prevHunt:I(elev^2) + prevHunt:I(northness^2))
+                       + prevHunt*snowSt + prevHunt*I(slope^2) + prevHunt:I(elev^2) + prevHunt:I(northness^2) - prevHunt)
           
           
           # canopy (i.e., hiding cover/escape terrain) only
-          d107 <- update(envtDay, . ~ . + prevHunt*canSt)          
+          d107 <- update(envtDay, . ~ . + prevHunt*canSt - prevHunt)          
 
           
           
@@ -842,47 +850,47 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d108 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt - tSinceHunt)
           
           # linear, predictable feedgrounds, canopy
           d109 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, predictable feedgrounds
           d110 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  tSinceHunt*distRdSt +  tSinceHunt*distStrucSt +  tSinceHunt*recClass +  tSinceHunt*activeFeedSt
-                       +  tSinceHunt*I(distRdSt^2) +  tSinceHunt*I(distStrucSt^2) +  tSinceHunt*I(activeFeedSt^2))
+                       +  tSinceHunt*I(distRdSt^2) +  tSinceHunt*I(distStrucSt^2) +  tSinceHunt*I(activeFeedSt^2) - tSinceHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d111 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  tSinceHunt*distRdSt +  tSinceHunt*distStrucSt +  tSinceHunt*recClass +  tSinceHunt*activeFeedSt
                        +  tSinceHunt*I(distRdSt^2) +  tSinceHunt*I(distStrucSt^2) +  tSinceHunt*I(activeFeedSt^2)
-                       + tSinceHunt*canSt)
+                       + tSinceHunt*canSt - tSinceHunt)
       
           # linear, all feedgrounds
           d112 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt - tSinceHunt)
           
           # linear, all feedgrounds, canopy
           d113 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, all feedgrounds
           d114 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt
-                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2))
+                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2) - tSinceHunt)
           
           # quadratic, all feedgrounds, canopy
           d115 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt
                        + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2)
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
           
           
           
@@ -890,38 +898,40 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d116 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt - tSinceHunt)
           
           # linear, predictable feedgrounds, canopy
           d117 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt + tSinceHunt*canSt)          
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt + tSinceHunt*canSt - tSinceHunt)          
           
       
           # quadratic, predictable feedgrounds
           d118 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(activeFeedSt^2))
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) 
+                       + tSinceHunt*I(activeFeedSt^2) - tSinceHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d119 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(activeFeedSt^2)
-                       + tSinceHunt*canSt)
+                       + tSinceHunt*canSt - tSinceHunt)
       
           # linear, all feedgrounds
           d120 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt - tSinceHunt)
           
           # linear, all feedgrounds, canopy
           d121 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt + tSinceHunt*canSt)          
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, all feedgrounds
           d122 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distFeedSt^2))
+                       + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) 
+                       + tSinceHunt*I(distFeedSt^2) - tSinceHunt)
           
           # quadratic, all feedgrounds, canopy
           d123 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*recClass + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distFeedSt^2)
-                       + tSinceHunt*canSt)
+                       + tSinceHunt*canSt - tSinceHunt)
                     
       
       
@@ -931,47 +941,47 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d124 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt - tSinceHunt)
           
           # linear, predictable feedgrounds, canopy
           d125 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, predictable feedgrounds
           d126 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt
-                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(activeFeedSt^2))
+                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(activeFeedSt^2) - tSinceHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d127 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt
                        + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(activeFeedSt^2)
-                       + tSinceHunt*canSt)
+                       + tSinceHunt*canSt - tSinceHunt)
       
           # linear, all feedgrounds
           d128 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt - tSinceHunt)
           
           # linear, all feedgrounds, canopy
           d129 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, all feedgrounds
           d130 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt
-                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2))
+                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2) - tSinceHunt)
           
           # quadratic, all feedgrounds, canopy
           d131 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt
                        + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2)
-                       + tSinceHunt*canSt)          
+                       + tSinceHunt*canSt - tSinceHunt)          
           
           
           
@@ -979,72 +989,74 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d132 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt - tSinceHunt)
           
           # linear, predictable feedgrounds, canopy
           d133 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt + tSinceHunt*canSt)          
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt + tSinceHunt*canSt - tSinceHunt)          
 
           # quadratic, predictable feedgrounds
           d134 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(activeFeedSt^2))
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) 
+                       + tSinceHunt*I(activeFeedSt^2) - tSinceHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d135 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*activeFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(activeFeedSt^2)
-                       + tSinceHunt*canSt)
+                       + tSinceHunt*canSt - tSinceHunt)
       
           # linear, all feedgrounds
           d136 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt)
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt - tSinceHunt)
           
           # linear, all feedgrounds, canopy
           d137 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt + tSinceHunt*canSt)          
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt + tSinceHunt*canSt - tSinceHunt)          
       
           # quadratic, all feedgrounds
           d138 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distFeedSt^2)) 
+                       + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) 
+                       + tSinceHunt*I(distFeedSt^2) - tSinceHunt) 
           
           # quadratic, all feedgrounds, canopy
           d139 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + tSinceHunt*distRdSt + tSinceHunt*motoUse + tSinceHunt*distFeedSt + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distFeedSt^2)
-                       + tSinceHunt*canSt) 
+                       + tSinceHunt*canSt - tSinceHunt) 
       
 
         
       #### off-trail recreation - alone; with or without structures ####  
           
           # off-trail recreation only
-          d140 <- update(envtDay, . ~ . + otUse + tSinceHunt*otUse)
+          d140 <- update(envtDay, . ~ . + otUse + tSinceHunt*otUse - tSinceHunt)
           
           # off-trail recreation only, canopy
-          d141 <- update(envtDay, . ~ . + otUse + tSinceHunt*otUse + tSinceHunt*canSt)          
+          d141 <- update(envtDay, . ~ . + otUse + tSinceHunt*otUse + tSinceHunt*canSt - tSinceHunt)          
           
           # off-trail and structures, linear
-          d142 <- update(envtDay, . ~ . + otUse + distStrucSt + tSinceHunt*otUse + tSinceHunt*distStrucSt)
+          d142 <- update(envtDay, . ~ . + otUse + distStrucSt + tSinceHunt*otUse + tSinceHunt*distStrucSt - tSinceHunt)
           
           # off-trail and structures, linear, canopy
-          d143 <- update(envtDay, . ~ . + otUse + distStrucSt + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*canSt)          
+          d143 <- update(envtDay, . ~ . + otUse + distStrucSt + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*canSt - tSinceHunt)          
           
           # offtrail and structures, quadratic
           d144 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*I(distStrucSt^2))
+                       + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*I(distStrucSt^2) - tSinceHunt)
           
           # offtrail and structures, quadratic, canopy
           d145 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*I(distStrucSt^2) + tSinceHunt*canSt)          
+                       + tSinceHunt*otUse + tSinceHunt*distStrucSt + tSinceHunt*I(distStrucSt^2) + tSinceHunt*canSt - tSinceHunt)          
           
           
     #### change use of landscape but not response to people ####       
           
           # all environment
           d146 <- update(envtDay, . ~ . + tSinceHunt:lcClass + tSinceHunt*can + tSinceHunt*slope + tSinceHunt*elev + tSinceHunt*northness
-                       + tSinceHunt*snowSt + tSinceHunt*I(slope^2) + tSinceHunt:I(elev^2) + tSinceHunt:I(northness^2))
+                       + tSinceHunt*snowSt + tSinceHunt*I(slope^2) + tSinceHunt:I(elev^2) + tSinceHunt:I(northness^2) - tSinceHunt)
           
           
           # canopy (i.e., hiding cover/escape terrain) only
-          d147 <- update(envtDay, . ~ . + tSinceHunt*canSt)  
+          d147 <- update(envtDay, . ~ . + tSinceHunt*canSt - tSinceHunt)  
           
           
   #### competition ####
@@ -1088,47 +1100,47 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d148 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*activeFeedSt)
+                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*activeFeedSt - tContHunt)
           
           # linear, predictable feedgrounds, canopy
           d149 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*activeFeedSt
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
       
           # quadratic, predictable feedgrounds
           d150 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  tContHunt*distRdSt +  tContHunt*distStrucSt +  tContHunt*recClass +  tContHunt*activeFeedSt
-                       +  tContHunt*I(distRdSt^2) +  tContHunt*I(distStrucSt^2) +  tContHunt*I(activeFeedSt^2))
+                       +  tContHunt*I(distRdSt^2) +  tContHunt*I(distStrucSt^2) +  tContHunt*I(activeFeedSt^2) - tContHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d151 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        +  tContHunt*distRdSt +  tContHunt*distStrucSt +  tContHunt*recClass +  tContHunt*activeFeedSt
                        +  tContHunt*I(distRdSt^2) +  tContHunt*I(distStrucSt^2) +  tContHunt*I(activeFeedSt^2)
-                       + tContHunt*canSt)
+                       + tContHunt*canSt - tContHunt)
       
           # linear, all feedgrounds
           d152 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*distFeedSt)
+                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*distFeedSt - tContHunt)
           
           # linear, all feedgrounds, canopy
           d153 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*distFeedSt
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
       
           # quadratic, all feedgrounds
           d154 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*distFeedSt
-                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2))
+                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2) - tContHunt)
           
           # quadratic, all feedgrounds, canopy
           d155 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*recClass + tContHunt*distFeedSt
                        + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2)
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
           
           
           
@@ -1136,38 +1148,40 @@ rm(wd_kjb, wd_greg)
       
           # linear, predictable feedgrounds
           d156 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt)
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt - tContHunt)
           
           # linear, predictable feedgrounds, canopy
           d157 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*canSt)          
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*canSt - tContHunt)          
           
 
           # quadratic, predictable feedgrounds
           d158 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(activeFeedSt^2))
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) 
+                       + tContHunt*I(activeFeedSt^2) - tContHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d159 <- update(envtDay, . ~ . + distRdSt + recClass + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*recClass + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(activeFeedSt^2)
-                       + tContHunt*canSt)
+                       + tContHunt*canSt - tContHunt)
 
           # linear, all feedgrounds
           d160 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt)
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt - tContHunt)
           
           # linear, all feedgrounds, canopy
           d161 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt + tContHunt*canSt)          
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt + tContHunt*canSt - tContHunt)          
       
           # quadratic, all feedgrounds
           d162 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(distFeedSt^2))
+                       + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) 
+                       + tContHunt*I(distFeedSt^2) - tContHunt)
           
           # quadratic, all feedgrounds, canopy
           d163 <- update(envtDay, . ~ . + distRdSt + recClass + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*recClass + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(distFeedSt^2)
-                       + tContHunt*canSt)
+                       + tContHunt*canSt - tContHunt)
                     
       
       
@@ -1177,47 +1191,47 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d164 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*activeFeedSt)
+                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*activeFeedSt - tContHunt)
           
           # linear, predictable feedgrounds, canopy
           d165 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*activeFeedSt
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
       
           # quadratic, predictable feedgrounds
           d166 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*activeFeedSt
-                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(activeFeedSt^2))
+                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(activeFeedSt^2) - tContHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d167 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + activeFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*activeFeedSt
                        + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(activeFeedSt^2)
-                       + tContHunt*canSt)
+                       + tContHunt*canSt - tContHunt)
       
           # linear, all feedgrounds
           d168 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*distFeedSt)
+                       + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*distFeedSt - tContHunt)
           
           # linear, all feedgrounds, canopy
           d169 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*distFeedSt
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
       
           # quadratic, all feedgrounds
           d170 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*distFeedSt
-                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2))
+                       + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2) - tContHunt)
           
           # quadratic, all feedgrounds, canopy
           d171 <- update(envtDay, . ~ . + distRdSt + distStrucSt + motoUse + distFeedSt
                        + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*distStrucSt + tContHunt*motoUse + tContHunt*distFeedSt
                        + tContHunt*I(distRdSt^2) + tContHunt*I(distStrucSt^2) + tContHunt*I(distFeedSt^2)
-                       + tContHunt*canSt)          
+                       + tContHunt*canSt - tContHunt)          
           
           
           
@@ -1225,72 +1239,75 @@ rm(wd_kjb, wd_greg)
           
           # linear, predictable feedgrounds
           d172 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt)
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt - tContHunt)
           
           # linear, predictable feedgrounds, canopy
           d173 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt + tContHunt*canSt)          
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt + tContHunt*canSt - tContHunt)          
       
           # quadratic, predictable feedgrounds
           d174 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(activeFeedSt^2))
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) 
+                       + tContHunt*I(activeFeedSt^2) - tContHunt)
 
           # quadratic, predictable feedgrounds, canopy
           d175 <- update(envtDay, . ~ . + distRdSt + motoUse + activeFeedSt + I(distRdSt^2) + I(activeFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*activeFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(activeFeedSt^2)
-                       + tContHunt*canSt)
+                       + tContHunt*canSt - tContHunt)
       
           # linear, all feedgrounds
           d176 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt)
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt - tContHunt)
           
           # linear, all feedgrounds, canopy
           d177 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt + tContHunt*canSt)          
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt + tContHunt*canSt - tContHunt)          
       
           # quadratic, all feedgrounds
           d178 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
-                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(distFeedSt^2)) 
+                       + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) 
+                       + tContHunt*I(distFeedSt^2) - tContHunt) 
           
           # quadratic, all feedgrounds, canopy
           d179 <- update(envtDay, . ~ . + distRdSt + motoUse + distFeedSt + I(distRdSt^2) + I(distFeedSt^2)
                        + tContHunt*distRdSt + tContHunt*motoUse + tContHunt*distFeedSt + tContHunt*I(distRdSt^2) + tContHunt*I(distFeedSt^2)
-                       + tContHunt*canSt) 
+                       + tContHunt*canSt - tContHunt) 
       
 
         
       #### off-trail recreation - alone; with or without structures ####  
           
           # off-trail recreation only
-          d180 <- update(envtDay, . ~ . + otUse + tContHunt*otUse)
+          d180 <- update(envtDay, . ~ . + otUse + tContHunt*otUse - tContHunt)
           
           # off-trail recreation only, canopy
-          d181 <- update(envtDay, . ~ . + otUse + tContHunt*otUse + tContHunt*canSt)          
+          d181 <- update(envtDay, . ~ . + otUse + tContHunt*otUse + tContHunt*canSt - tContHunt)          
           
           # off-trail and structures, linear
-          d182 <- update(envtDay, . ~ . + otUse + distStrucSt + tContHunt*otUse + tContHunt*distStrucSt)
+          d182 <- update(envtDay, . ~ . + otUse + distStrucSt + tContHunt*otUse + tContHunt*distStrucSt - tContHunt)
           
           # off-trail and structures, linear, canopy
-          d183 <- update(envtDay, . ~ . + otUse + distStrucSt + tContHunt*otUse + tContHunt*distStrucSt + tContHunt*canSt)          
+          d183 <- update(envtDay, . ~ . + otUse + distStrucSt + tContHunt*otUse + tContHunt*distStrucSt 
+                         + tContHunt*canSt - tContHunt)          
           
           # offtrail and structures, quadratic
           d184 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + tContHunt*otUse + tContHunt*distStrucSt + tContHunt*I(distStrucSt^2))
+                       + tContHunt*otUse + tContHunt*distStrucSt + tContHunt*I(distStrucSt^2) - tContHunt)
           
           # offtrail and structures, quadratic, canopy
           d185 <- update(envtDay, . ~ . + otUse + distStrucSt + I(distStrucSt^2)
-                       + tContHunt*otUse + tContHunt*distStrucSt + tContHunt*I(distStrucSt^2) + tContHunt*canSt)          
+                       + tContHunt*otUse + tContHunt*distStrucSt + tContHunt*I(distStrucSt^2) + tContHunt*canSt - tContHunt)          
           
           
     #### change use of landscape but not response to people ####       
           
           # all environment
           d186 <- update(envtDay, . ~ . + tContHunt:lcClass + tContHunt*can + tContHunt*slope + tContHunt*elev + tContHunt*northness
-                       + tContHunt*snowSt + tContHunt*I(slope^2) + tContHunt:I(elev^2) + tContHunt:I(northness^2))
+                       + tContHunt*snowSt + tContHunt*I(slope^2) + tContHunt:I(elev^2) + tContHunt:I(northness^2) - tContHunt)
           
           
           # canopy (i.e., hiding cover/escape terrain) only
-          d187 <- update(envtDay, . ~ . + tContHunt*canSt)        
+          d187 <- update(envtDay, . ~ . + tContHunt*canSt - tContHunt)        
           
   #### competition ####
       
@@ -1416,11 +1433,7 @@ rm(wd_kjb, wd_greg)
         bicAll <- bicAll[order(bicAll$Delta_BIC), ]
         # .. and exported
         write.csv(bicAll, "bic-day.csv", row.names=F)      
-      
-################################################################################################## #  
 
-      
-      save.image("modelsHumanDay.RData") 
       
 ################################################################################################## # 
       
@@ -1467,6 +1480,15 @@ rm(wd_kjb, wd_greg)
           # export
           write.csv(topDay, "topModDay.csv", row.names = F)
               
+          
+      
+################################################################################################## #  
+
+      
+      save.image("modelsHumanDay.RData") 
+      
+      
+          
 ################################################################################################## # 
       
     
