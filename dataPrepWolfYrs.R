@@ -81,7 +81,7 @@
     
     
         ## historic collar data (from GTNP; cleaned by jen)  
-        rawHist <- read.csv(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\wolfHistoricCleaned.csv"))
+        rawHist <- read.csv(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\wolfHistoricRecleaned.csv"))
 
         ## recent collar data files and filepaths 
         rawNames <- list.files(paste0(datDir, "\\Wolf\\WolfCollarDownloads\\Post2016FromCollaborators"))
@@ -141,7 +141,7 @@
             # order columns to match later dataframes for joins
             dplyr::select("Wolf", "Pack", "datetime", "Date", "daytime",
                               "Time", "Month", "Day", "Year",
-                              "X", "Y", "Latitude", "Longitude", "wolfYr")
+                              "X", "Y", "Latitude", "Longitude", "wolfYr") 
           any(is.na(allHist)) # verify no wonky datetimes
 
         
