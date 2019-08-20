@@ -443,6 +443,6 @@
                  overwrite_layer = TRUE)
 
         
- save.image(file = "modDat.RData")
+ save.image(paste0("dataPrepWolfSpatial_", today(), ".RData"))
         
  
