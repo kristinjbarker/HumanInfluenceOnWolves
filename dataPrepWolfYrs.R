@@ -125,8 +125,6 @@
         
           ## format data to facilitate later joins
           allHist <- rawHist %>%
-            # remove weird extra column and Number column
-            dplyr::select(-c("X.1", "Number")) %>%
             # format dates & times; add wolfYr
             mutate(datetime = ymd_hms(datetime, tz = "America/Denver"),
                    Date = as.Date(Date, format = "%m/%d/%Y"),
@@ -616,6 +614,7 @@
                    overwrite_layer = TRUE)          
         
           
-          
+          # store
+          save.image(paste0("dataPrepWolfYrs_", today(), ".RData"))
 
         
