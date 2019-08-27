@@ -126,7 +126,7 @@
           ## format data to facilitate later joins
           allHist <- rawHist %>%
             # format dates & times; add wolfYr
-            mutate(datetime = ymd_hms(datetime, tz = "America/Denver"),
+            mutate(datetime = mdy_hm(paste(Date, Time, sep = " "), tz = "America/Denver"),
                    Date = as.Date(Date, format = "%m/%d/%Y"),
                    Time = substr(datetime, 12, 19),
                    wolfYr = paste(Wolf, Year, sep = "-")) %>%
@@ -136,6 +136,10 @@
             filter(Month <= 3) %>%
             # add day/night indicator
             mutate(daytime = ifelse(hour(datetime) >= 8 & hour(datetime) <= 18, "day", "night")) %>%
+            # randomly select 2 locations per day (one during day, one during night)
+            group_by(Date, daytime) %>%
+            sample_n(1) %>%
+            ungroup() %>%
             # order columns to match later dataframes for joins
             dplyr::select("Wolf", "Pack", "datetime", "Date", "daytime",
                               "Time", "Month", "Day", "Year",
@@ -490,7 +494,7 @@
           
           
             wolfYrsUDs <- kernelUD(locsSp[ ,"wolfYr"], h = "href", same4all = FALSE)
-            wolfYrsHRs <- getverticeshr(wolfYrsUDs, percent = 95)
+            wolfYrsHRs <- getverticeshr(wolfYrsUDs, percent = 90)
             plot(wolfYrsHRs) 
           
           
@@ -510,7 +514,7 @@
             wolfDat <- locs %>%
               dplyr::select(Wolf, Pack, wolfYr) %>%
               distinct()
-            wolfDat <- droplevels(wolfDat)
+            wolfDat <- data.frame(droplevels(wolfDat))
             wolfYrs <- unique(locs$wolfYr)
             
             
@@ -555,8 +559,16 @@
               # randomly assign dates and times from those in recorded locations
               rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
               rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
-              rndmDat$daytime <- ifelse(as.numeric(substr(rndmDat$Time, 1, 2)) >= 8 & as.numeric(substr(rndmDat$Time, 1, 2)) <= 18, "day", "night")
-                            
+              
+              # randomly assign day/night (these do not correspond to randomly assigned times)
+              rndmDat$daytime <- rep(c("day", "night"), 
+                    # at 50:50 ratio to correspond to ratio in used locations
+                    times = c(floor(nrow(rndmDat)/2), ifelse(nrow(rndmDat) %% 2 == 1,  
+                    # if there's an odd number of locations, first just make it night
+                    floor(nrow(rndmDat)/2) + 1, floor(nrow(rndmDat)/2))))
+              # then randomly assign it day or night with 50% probability of each
+              if (nrow(rndmDat) %% 2 == 1) { rndmDat[nrow(rndmDat), "daytime"] <- sample(c("day", "night"), size = 1, prob = c(0.5, 0.5))  }
+              
               # combine random and recorded locations
               wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Wolf", "Pack", "Date", "Time", "daytime"))
               wDat <- rbind(wLocsOnly, rndmDat)
@@ -581,7 +593,7 @@
           locsUA$Longitude <- locsUA.LL@coords[, "x"]
           
           # add datetime
-          locsUA$datetime <- paste(locsUA$Date, locsUA$Time, sep = "")
+          locsUA$datetime <- paste(locsUA$Date, locsUA$Time, sep = " ")
           
           # format 
           locsUA <- locsUA %>%
