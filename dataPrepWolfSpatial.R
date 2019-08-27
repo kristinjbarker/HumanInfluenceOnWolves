@@ -138,7 +138,7 @@
       lcLegendRaw <- read.csv(paste0(datDir, "//Land//LandcoverType//NLCD//nlcdLegend.csv")) 
       
       # recreational access
-      recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'Winter_travel_restrictions_November_2016')
+      recRaw <- readOGR(paste0(datDir, "/Human/RecAccess"), layer = 'winterRec')
       recLegendRaw <- recRaw@data
 
    
@@ -377,7 +377,7 @@
           dplyr::select(lcVal, lcType, lcClass)
 
         # add landcover classification info to model data
-        modDat <- left_join(modDatRaw, lcTypes, by = c("lc" = "lcVal"))
+        modDatLc <- left_join(modDatRaw, lcTypes, by = c("lc" = "lcVal"))
         
 
         
@@ -388,7 +388,10 @@
         # format and rename recreation classification info
         recTypes <- recLegendRaw %>%
           rename(mapCol = MapColor, sled = Over_Snow_, nonmoto = Non_Motori) %>%
-          dplyr::select(mapCol, sled, nonmoto)
+          dplyr::select(mapCol, sled, nonmoto) %>%
+          # remove NAs (from manual shp updates - this data is contained in the other rows)
+          filter(!is.na(sled)) %>%
+          distinct()
         
         # map factor levels to access type
         recTypes$recNum <- ifelse(
@@ -401,7 +404,7 @@
 
     
         # add recreation classification info to model data
-        modDat <- left_join(modDat, recTypes, by = c("rec" = "recNum"))   
+        modDat <- left_join(modDatLc, recTypes, by = c("rec" = "recNum"))   
         modDat$recClass <- ifelse(is.na(modDat$recClass), "noRec", modDat$recClass)
         
         
