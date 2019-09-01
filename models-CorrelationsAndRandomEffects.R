@@ -301,7 +301,6 @@ rm(wd_kjb, wd_greg)
         # day - calculate and export
         aicD <- data.frame(aictab(cand.set = c(w, p, wNp), 
                                     modnames = c("Wolf", "Pack", "WolfInPack")))
-        aicD$LL <- c(logLik(w), logLik(p), logLik(wNp))        
         aicD <- aicD[order(aicD$Delta_AICc), ]
         write.csv(aicD, file = "aic-RE-structure.csv", row.names = FALSE)         
 
