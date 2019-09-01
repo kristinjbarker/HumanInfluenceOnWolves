@@ -39,12 +39,6 @@ rm(wd_kjb, wd_greg)
     
     # list of packages needed
     packages <- c(
-      #"raster",        ## raster stacking, extraction, etc
-      #"maptools",      ## kmlPoints
-      #"rgdal",         ## spatial/shapefile work 
-      #"rgeos",         ## gDistance and other spatial work
-      #"sp",            ## spatial work
-      #"sf",            ## spatial work like the kids are doing it these days
       "lme4",           ## regression models
       "arm",            ## binned residual plots
       "aods3",          ## quick gof tests
@@ -72,15 +66,7 @@ rm(wd_kjb, wd_greg)
     ipak(packages) 
     rm(ipak, packages)
 
-    
-  
-  #### Define spatial projections ####
-    # 
-    # ll <- CRS("+init=epsg:4326") # WGS 84
-    # utm <- CRS("+init=epsg:3742") # NAD83(HARN)/UTMzone12N 
-    # aea <- CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,-0,-0,-0,0 +units=m +no_defs")
-    # 
-    # 
+
     
   #### Increase memory limit ####
     
@@ -109,7 +95,7 @@ rm(wd_kjb, wd_greg)
 
     
     modDat <- modDatRaw %>% mutate(
-      datetime = ymd_hms(datetime),
+      datetime = ymd_hms(datetime, tz = "America/Denver"),
       # handle datetimes and dates of course
       Date = ymd(Date),
       # year as numeric
@@ -147,7 +133,7 @@ rm(wd_kjb, wd_greg)
     cor7 <- corDat
     cor7[cor7 < 0.70] <- NA
     cor7
-    # just rug+slope, distFeed+distActiveFeed, most hunts with each other
+    # just rug+slope, most hunts with each other
 
     # correlations >= 0.60
     cor6 <- corDat
@@ -159,9 +145,8 @@ rm(wd_kjb, wd_greg)
     cor5 <- corDat
     cor5[cor5 < 0.50] <- NA
     cor5
-    # now also elev+slope and elev+rug, but less correlated with slope so still sticking with that one
-    # also no elev+distStruc, as expected
-    # but these are all <0.51 so i feel alright about them
+    # now also distStruc+distRd, but only 0.53
+
 
     # take-home: choose slope over ruggedness
       
@@ -326,33 +311,6 @@ rm(wd_kjb, wd_greg)
                                               calc.derivs = FALSE))   
         
         
-        # wolf and pack, separate
-        wPpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
-                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
-                       + (1|wolfYr) + (1|Pack), family = binomial(logit), data = datDay,
-                       control = glmerControl(optimizer = "bobyqa", 
-                                              optCtrl=list(maxfun=2e4),
-                                              calc.derivs = FALSE))
-        wPpNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
-                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
-                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
-                       + (1|wolfYr) + (1|Pack), family = binomial(logit), data = datNight,
-                       control = glmerControl(optimizer = "bobyqa", 
-                                              optCtrl=list(maxfun=2e4),
-                                              calc.derivs = FALSE))           
-        
-        
         # wolf-year nested in pack
         wNpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
@@ -382,20 +340,20 @@ rm(wd_kjb, wd_greg)
 
       #### Compete models ####
           
+        
         # day - calculate and export
-        aicDay <- data.frame(AIC(noreDay, wDay, pDay, wPpDay, wNpDay), 
-                             randomEffect = c("None", "Wolf", "Pack", "wolfPlusPack", "WolfInPack"))
-        aicDay$LL <- c(logLik(noreDay), logLik(wDay), logLik(pDay), logLik(wPpDay), logLik(wNpDay))        
-        aicDay <- aicDay[order(aicDay$AIC), ]
-        aicDay$deltaAIC = aicDay$AIC - min(aicDay$AIC)
+        aicDay <- data.frame(aictab(cand.set = c(wDay, pDay, wNpDay), 
+                                    modnames = c("Wolf", "Pack", "WolfInPack")))
+        aicDay$LL <- c(logLik(wDay), logLik(pDay), logLik(wNpDay))        
+        aicDay <- aicDay[order(aicDay$Delta_AICc), ]
         write.csv(aicDay, file = "aic-reStructure-Day.csv", row.names = FALSE)         
   
+        
         # night - calculate and export
-        aicNight <- data.frame(AIC(noreNight, wNight, pNight, wPpNight, wNpNight), 
-                               randomEffect = c("None", "Wolf", "Pack", "wolfPlusPack", "WolfInPack"))
-        aicNight$LL <- c(logLik(noreNight), logLik(wNight), logLik(pNight), logLik(wPpNight), logLik(wNpNight))        
-        aicNight <- aicNight[order(aicNight$AIC), ]
-        aicNight$deltaAIC = aicNight$AIC - min(aicNight$AIC)
+        aicNight <- data.frame(aictab(cand.set = c(wNight, pNight, wNpNight), 
+                                    modnames = c("Wolf", "Pack", "WolfInPack")))
+        aicNight$LL <- c(logLik(wNight), logLik(pNight), logLik(wNpNight))        
+        aicNight <- aicNight[order(aicNight$Delta_AICc), ]
         write.csv(aicNight, file = "aic-reStructure-Night.csv", row.names = FALSE)            
           
                    
