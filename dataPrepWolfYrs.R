@@ -36,7 +36,8 @@
       "sp",            ## spatial work
       "sf",            ## for spatial work like the kids are doing it these days
       "lubridate",     ## manipulate datetime data inside dplyr pipes
-      "adehabitatHR",   ## estimate home ranges
+      "adehabitatHR",  ## estimate home ranges
+      "suncalc",       ## determine crepuscular times based on lat/longs
       "dplyr")         ## data manipulation and general awesomeness
     
     
@@ -124,7 +125,7 @@
       #### prep historic data ####
         
           ## format data to facilitate later joins
-          allHist <- rawHist %>%
+          allHistPrelim <- rawHist %>%
             # format dates & times; add wolfYr
             mutate(datetime = mdy_hm(paste(Date, Time, sep = " "), tz = "America/Denver"),
                    Date = as.Date(Date, format = "%m/%d/%Y"),
@@ -133,10 +134,23 @@
             # remove daylight savings NAs (figure out a more refined way to handle this later)
             filter(!is.na(datetime)) %>%
             # only use winter locations
-            filter(Month <= 3) %>%
-            # add day/night indicator
-            mutate(daytime = ifelse(hour(datetime) >= 8 & hour(datetime) <= 18, "day", "night")) %>%
-            # randomly select 2 locations per day (one during day, one during night)
+            filter(Month <= 3)
+ 
+          ## add day/night/crepuscular indicator
+          crepHist <- allHistPrelim %>%
+            dplyr::rename(date = Date, lat = Latitude, lon = Longitude) 
+          crepHist <- getSunlightTimes(data = crepHist,
+                                       tz = "America/Denver",
+                                       keep = c("nightEnd", "goldenHourEnd", # night is astronomical night
+                                                "goldenHour", "night")) # golden hour is soft light
+          allHist <- cbind(allHistPrelim, crepHist)
+          allHist$daytime <- ifelse(allHist$datetime > allHist$nightEnd & allHist$datetime < allHist$goldenHourEnd |
+                            allHist$datetime > allHist$goldenHour & allHist$datetime < allHist$night, "crepusc", 
+                            ifelse(allHist$datetime < allHist$nightEnd | allHist$datetime > allHist$night, "night", "day"))
+
+ 
+          # randomly select 3 locations per day (one day, one crepuscular, one night)
+          allHist <- allHist %>%          
             group_by(Date, daytime) %>%
             sample_n(1) %>%
             ungroup() %>%
@@ -226,7 +240,7 @@
             
             # start renaming columns to match historic data format
             iDatA <- iDatA %>%
-              rename(datetime = 'Acquisition Time',
+              dplyr::rename(datetime = 'Acquisition Time',
                      Latitude = 'GPS Latitude',
                      Longitude = 'GPS Longitude') %>%
               mutate(Wolf = iWolf,
@@ -246,9 +260,22 @@
                      Day = day(datetime),
                      Year = year(datetime),
                      Hour = hour(datetime)) 
-            
-            # identify day vs nighttime locations
-            iDatA$daytime = ifelse(iDatA$Hour >= 8 & iDatA$Hour <= 18, "day", "night")
+
+            # define crepuscular time
+            crepiDatA <- iDatA %>%
+              mutate(Date = as.Date(Date)) %>%
+              dplyr::rename(date = Date, lat = Latitude, lon = Longitude) 
+            crepiDatA <- getSunlightTimes(data = crepiDatA,
+                                         tz = "America/Denver",
+                                         keep = c("nightEnd", "goldenHourEnd", # night is astronomical night
+                                                  "goldenHour", "night")) # golden hour is soft light
+            # add day/night/crepuscular indicator
+            iDatA <- cbind(iDatA, crepiDatA)
+            iDatA$daytime <- ifelse(iDatA$datetime > iDatA$nightEnd & iDatA$datetime < iDatA$goldenHourEnd |
+                              iDatA$datetime > iDatA$goldenHour & iDatA$datetime < iDatA$night, "crepusc", 
+                              ifelse(iDatA$datetime < iDatA$nightEnd | iDatA$datetime > iDatA$night, "night", "day"))
+  
+               
 
             # format date
             iDatA$Date <- as.Date(iDatA$Date)
@@ -262,7 +289,7 @@
               filter(!is.na(datetime)) %>%
               # only use winter locations (jan-mar to align with cluster data) 
               filter(Month <= 3) %>%
-              # randomly select 2 locations per day (one during day, one during night)
+              # randomly select 3 locations per day (one day, one crepuscular, one night)
               group_by(Date, daytime) %>%
               sample_n(1) %>%
               ungroup()  
@@ -345,7 +372,7 @@
               # remove unsuccessful locations 
               filter(FixStatus == "Succeeded") %>%
               # match column dates of historic data
-              rename(Wolf = wolfID,
+              dplyr::rename(Wolf = wolfID,
                      Latitude = Lat,
                      Longitude = Long) %>%
               # format date and time info
@@ -360,17 +387,29 @@
                      Year = year(datetime),
                      Hour = hour(datetime)) %>%
               # only use winter locations
-              filter(Month <= 3) %>%
-              # identify day vs nighttime locations
-              mutate(daytime = ifelse(Hour >= 8 & Hour <= 18, "day", "night")) %>%
-              # randomly select 2 locations per day (one during day, one during night)
-              group_by(Wolf, Day, daytime) %>%
-              sample_n(1) %>%
-              ungroup()  
+              filter(Month <= 3)
+            
+            # define crepuscular time
+            creplocsMe <- locsMe %>%
+              mutate(Date = as.Date(Date)) %>%
+              dplyr::rename(date = Date, lat = Latitude, lon = Longitude) 
+            creplocsMe <- getSunlightTimes(data = creplocsMe,
+                                         tz = "America/Denver",
+                                         keep = c("nightEnd", "goldenHourEnd", # night is astronomical night
+                                                  "goldenHour", "night")) # golden hour is soft light
+            # add day/night/crepuscular indicator
+            locsMe <- cbind(locsMe, creplocsMe)
+            locsMe$daytime <- ifelse(locsMe$datetime > locsMe$nightEnd & locsMe$datetime < locsMe$goldenHourEnd |
+                              locsMe$datetime > locsMe$goldenHour & locsMe$datetime < locsMe$night, "crepusc", 
+                              ifelse(locsMe$datetime < locsMe$nightEnd | locsMe$datetime > locsMe$night, "night", "day"))
+            
+
             # finalize date format
             locsMe$Date <- as.Date(locsMe$Date)
+            
             # remove any stored factor levels
             locsMe <- droplevels(locsMe)
+            
             # sanity check, should print F
             any(is.na(locsMe$datetime)) 
 
@@ -399,6 +438,12 @@
             # add correct utms to data 
             iDat$X <- iUTM@coords[ , "x"]
             iDat$Y <- iUTM@coords[ , "y"]
+            
+            # randomly select 3 locations per day (one day, one crespuscular, one night)
+            iDat <- iDat %>%
+              group_by(Day, daytime) %>%
+              sample_n(1) %>%
+              ungroup()              
 
             # format to match master dataframe
             iDat <- iDat %>%
@@ -560,14 +605,9 @@
               rndmDat$Date <- sample(wDates, size = nrow(rndmDat), replace = T)
               rndmDat$Time <- sample(wTimes, size = nrow(rndmDat), replace = T)
               
-              # randomly assign day/night (these do not correspond to randomly assigned times)
-              rndmDat$daytime <- rep(c("day", "night"), 
-                    # at 50:50 ratio to correspond to ratio in used locations
-                    times = c(floor(nrow(rndmDat)/2), ifelse(nrow(rndmDat) %% 2 == 1,  
-                    # if there's an odd number of locations, first just make it night
-                    floor(nrow(rndmDat)/2) + 1, floor(nrow(rndmDat)/2))))
-              # then randomly assign it day or night with 50% probability of each
-              if (nrow(rndmDat) %% 2 == 1) { rndmDat[nrow(rndmDat), "daytime"] <- sample(c("day", "night"), size = 1, prob = c(0.5, 0.5))  }
+              # randomly assign day/night/crep with appx equal probability
+              # (these do not correspond to randomly assigned times)
+              rndmDat$daytime <- rep(c("day", "night", "crep"), length.out = nrow(rndmDat))
               
               # combine random and recorded locations
               wLocsOnly <- dplyr::select(wLocs, c("X", "Y", "Used", "wolfYr", "Wolf", "Pack", "Date", "Time", "daytime"))
