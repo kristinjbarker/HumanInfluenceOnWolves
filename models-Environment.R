@@ -95,7 +95,7 @@ rm(wd_kjb, wd_greg)
 
     
     modDat <- modDatRaw %>% mutate(
-      datetime = ymd_hms(datetime),
+      datetime = ymd_hms(datetime, tz = "America/Denver"),
       # handle datetimes and dates of course
       Date = ymd(Date),
       # year as numeric
@@ -107,7 +107,8 @@ rm(wd_kjb, wd_greg)
 
     # split data for night and day (faster than filtering in model, i think) #
     datDay <- filter(modDat, daytime == "day")
-    datNight <- filter(modDat, daytime == "night")    
+    datNight <- filter(modDat, daytime == "night") 
+    datCrep <- filter(modDat, daytime == "crep")
 
 
 
@@ -126,20 +127,54 @@ rm(wd_kjb, wd_greg)
                          + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                          + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
                          + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                         + (1|Pack), 
-                          family = binomial(logit), data = datDay) 
+                         + (1|Pack), family = binomial(logit), data = datDay,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                                optCtrl=list(maxfun=2e4),
+                                                calc.derivs = FALSE)) 
         
         globNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                            + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                            + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
                            + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                           + (1|Pack), 
-                           family = binomial(logit), data = datNight) 
+                           + (1|Pack/wolfYr), family = binomial(logit), data = datNight,
+                           control = glmerControl(optimizer = "bobyqa", 
+                                                  optCtrl=list(maxfun=2e4),
+                                                  calc.derivs = FALSE)) 
+
+        globCrep <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                   + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                   + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
+                   + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                   + (1|Pack/wolfYr), family = binomial(logit), data = datCrep,
+                   control = glmerControl(optimizer = "bobyqa", 
+                                          optCtrl=list(maxfun=2e4),
+                                          calc.derivs = FALSE)) 
             
         
       #### Evaluate relative covariate importance ####
-        
 
+        
+                
+        #### --day ####
+        
+          summary(globCrep)
+        
+          # remove snow:northness2 and snow:northness2
+          crep2 <- update(globCrep, . ~ . - northnessSt:snowSt - snowSt:I(northnessSt*northnessSt))
+          aictab(c(globCrep, crep2), modnames = c("global", "m2"))
+          summary(crep2)
+        
+          # also remove snow*slope2 and snow*slope
+          crep3 <- update(crep2, . ~ . - snowSt:I(slopeSt * slopeSt) - slopeSt:snowSt)
+          aictab(c(globCrep, crep2, crep3), modnames = c("global", "m2", "m3"))
+          summary(crep3)
+          
+          # also remove northness
+          crep4 <- update(crep3, . ~ . - northnessSt)
+          aictab(c(globCrep, crep2, crep3, crep4), modnames = c("global", "m2", "m3", "m4"))
+          summary(crep4)
+          
+          
         
         #### --day ####
 
@@ -147,27 +182,18 @@ rm(wd_kjb, wd_greg)
            
           # remove snow:northness2
           day2 <- update(globDay, . ~ . - snowSt:I(northnessSt*northnessSt))
-          AIC(day2, globDay) # day2 ftw 
+          aictab(c(globDay, day2), modnames = c("global", "m2")) # day2 ftw 
           summary(day2)
           
-          # also remove snow:northness
-          day3 <- update(day2, . ~ . - snowSt:northnessSt)
-          AIC(day3, day2, globDay) # day3 ftw 
+          # also remove snow:slope
+          day3 <- update(day2, . ~ . - snowSt:slopeSt)
+          aictab(c(globDay, day2, day3), modnames = c("global", "m2", "m3")) # day3 ftw 
           summary(day3)
           
-          # also remove snow:slope
-          day4 <- update(day3, . ~ . - slopeSt:snowSt)
-          AIC(day4, day3) # day4 ftw
-          summary(day4)
-          
-          # not removing main effect of snow bc it's impt in intrxns
-          # not removing main effect of canopy bc impt interacted with snow
-          # not removing main effect of elev bc impt in elev^2 and interacted w snow
-          # not removing main effect of northness bc it's impt in northness^2
-          
+
           # also remove landcover? (only 1 class is impt)
-          day5 <- update(day4, . ~ . - lcClass)
-          AIC(day5, day4) # day4 ftw 
+          day4 <- update(day3, . ~ . - lcClass)
+          aictab(c(day4, day2, day3), modnames = c("m4", "m2", "m3"))# no diff 
           summary(day4)
           
           # also remove elev:snow? (less impt than any remaining covariates)
@@ -192,17 +218,18 @@ rm(wd_kjb, wd_greg)
         
           # remove snow:northness2 
           night2 <- update(globNight, . ~ . - snowSt:I(northnessSt*northnessSt))
-          AIC(globNight, night2) # night2 ftw
+          aictab(c(globNight, night2), modnames = c("global", "m2")) # night2 ftw
           summary(night2)
           
           # also remove snow:slope and snow:slope2
           night3 <- update(night2, . ~ . - snowSt:slopeSt - snowSt:I(slopeSt*slopeSt))
-          AIC(globNight, night2, night3) # night3 ftw
+          aictab(c(night3, night2), modnames = c("m3", "m2")) # night3 ftw
           summary(night3)
           
           # also remove snow:northness
           night4 <- update(night3, . ~ . - northnessSt:snowSt)
-          AIC(globNight, night2, night3, night4) # night4 ftw
+          aictab(c(night4, night3, night2), modnames = c("m4", "m3", "m2"))
+          summary(night4)
           
           # evaluate all along with LL to avoid incorrect conclusion
           aicNight <- data.frame(aictab(cand.set = c(globNight, night2, night3, night4), 
@@ -232,8 +259,11 @@ rm(wd_kjb, wd_greg)
           envtDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                            + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                            + snowSt:canSt + snowSt:elevSt + snowSt:I(slopeSt*slopeSt) 
-                           + snowSt:I(elevSt*elevSt) + (1|Pack), 
-                           family = binomial(logit), data = datDay)           
+                           + snowSt:I(elevSt*elevSt) + (1|Pack/wolfYr), 
+                           family = binomial(logit), data = datDay,
+                           control = glmerControl(optimizer = "bobyqa", 
+                                                  optCtrl=list(maxfun=2e4),
+                                                  calc.derivs = FALSE))           
         ## binned residual plots ##
         
           # day - whole model
