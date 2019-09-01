@@ -77,19 +77,23 @@
  
 
     
-    #### Wolf Locations: Used & Available #### 
+    #### Wolf data #### 
     
+    
+    # locations: used & available
     locs <- read.csv("wolfLocs-UsedAvail.csv") 
     locs <- locs %>%
       mutate(wolfYr = as.character(wolfYr),
              Date = ymd(Date),
              Year = substr(wolfYr, nchar(wolfYr) - 3, nchar(wolfYr)))
 
-
     
-    #### Kill Sites: Used & Available ####   
-    
+    # kill sites: used & available
     # kills <- read.csv("killSites.csv")
+    
+    
+    # winter home ranges
+    winHrs <- readOGR(paste0(datDir, "/Wolf"), layer = 'winHRswolf')
         
     
         
@@ -120,8 +124,10 @@
       # feedgrounds
       feedLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsManualLL')
       feedAEA <- spTransform(feedLL, aea)
+      feedUTM <- spTransform(feedLL, utm)
       feedActiveLL <- readOGR(paste0(datDir, "/Human/Feedgrounds"), layer = 'feedgroundsActiveManualLL')
       feedActiveAEA <- spTransform(feedActiveLL, aea)
+      feedActiveUTM <- spTransform(feedActiveLL, utm)
       
       # structures
       strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
@@ -182,7 +188,7 @@
 ### ### ### ### ### ### ### ### ### ### 
 
         
-      ## Motorized roads ##
+      #### Motorized routes ####
     
         
         # calculate shortest distance from each point to a road
@@ -195,7 +201,8 @@
           distRd = distRdRaw[1,])
         
         
-      ## Feedgrounds ##      
+        
+      #### Feedgrounds ####      
         
         # calc distance to all feedgrounds
         distFeedRaw <- gDistance(locsAEA, feedAEA, byid = TRUE)
@@ -221,7 +228,7 @@
  
 
 
-      ## Structures ## 
+      #### Structures ### 
         
         # transform to match projection of other spatial data
         strucAEA <- spTransform(strucLL, aea)
@@ -287,8 +294,15 @@
         
                 
         
-      ## All distances ##
+      #### Combine all distances ####
         
+        
+        # determine whether wolf actually had feedgrounds available with 1km of its winter range
+        availFeed <- data.frame(gIntersects(feedUTM, gBuffer(winHrs, byid = TRUE, width = 1000), byid = TRUE))
+        availFeed$feedIn <- apply(availFeed, 1, any)
+        availFeed$wolfYr <- winHrs$id
+        availFeed <- dplyr::select(availFeed, wolfYr, feedIn)
+
         
         # join all distance values back to main dataframe
         distDat <- locsAEA@data %>%
@@ -296,8 +310,11 @@
           left_join(distRd, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
           left_join(distFeedActive, by = "rowNum") %>%
-          left_join(distStruc, by = "rowNum") # %>%
-          # left_join(distPrey, by = "rowNum")
+          left_join(distStruc, by = "rowNum") %>%
+          left_join(availFeed, by = "wolfYr") %>%
+          # if wolf had no feedgrounds available, make those distances NA
+          mutate(distFeed = ifelse(feedIn == FALSE, NA, distFeed),
+                 distFeedActive = ifelse(feedIn == FALSE, NA, distFeedActive))
    
 
 ################################################################################################## #  
@@ -434,6 +451,8 @@
       datetime = ymd_hms(datetime),
       # handle datetimes and dates of course
       Date = ymd(Date),
+      # format Year as numeric
+      Year = as.numeric(Year),
       # standardize continuous covariates
       slopeSt = (slope - mean(slope))/sd(slope),
       elevSt = (elev - mean(elev))/sd(elev),
@@ -442,8 +461,8 @@
       canSt = (can - mean(can))/sd(can),
       distRdSt = (distRd - mean(distRd))/sd(distRd),
       distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
-      distFeedSt = (distFeed - mean(distFeed))/sd(distFeed),
-      activeFeedSt = (distFeedActive - mean(distFeedActive))/sd(distFeedActive),
+      distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T),
+      activeFeedSt = (distFeedActive - mean(distFeedActive, na.rm = T))/sd(distFeedActive, na.rm = T),
       # order landcover from most to least available
       lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
       # use open recreation as baseline; reorder for more intuitive plot interpretation
