@@ -145,7 +145,7 @@
                                                 "goldenHour", "night")) # golden hour is soft light
           allHist <- cbind(allHistPrelim, crepHist)
           allHist$daytime <- ifelse(allHist$datetime > allHist$nightEnd & allHist$datetime < allHist$goldenHourEnd |
-                            allHist$datetime > allHist$goldenHour & allHist$datetime < allHist$night, "crepusc", 
+                            allHist$datetime > allHist$goldenHour & allHist$datetime < allHist$night, "crep", 
                             ifelse(allHist$datetime < allHist$nightEnd | allHist$datetime > allHist$night, "night", "day"))
 
  
@@ -272,7 +272,7 @@
             # add day/night/crepuscular indicator
             iDatA <- cbind(iDatA, crepiDatA)
             iDatA$daytime <- ifelse(iDatA$datetime > iDatA$nightEnd & iDatA$datetime < iDatA$goldenHourEnd |
-                              iDatA$datetime > iDatA$goldenHour & iDatA$datetime < iDatA$night, "crepusc", 
+                              iDatA$datetime > iDatA$goldenHour & iDatA$datetime < iDatA$night, "crep", 
                               ifelse(iDatA$datetime < iDatA$nightEnd | iDatA$datetime > iDatA$night, "night", "day"))
   
                
@@ -400,7 +400,7 @@
             # add day/night/crepuscular indicator
             locsMe <- cbind(locsMe, creplocsMe)
             locsMe$daytime <- ifelse(locsMe$datetime > locsMe$nightEnd & locsMe$datetime < locsMe$goldenHourEnd |
-                              locsMe$datetime > locsMe$goldenHour & locsMe$datetime < locsMe$night, "crepusc", 
+                              locsMe$datetime > locsMe$goldenHour & locsMe$datetime < locsMe$night, "crep", 
                               ifelse(locsMe$datetime < locsMe$nightEnd | locsMe$datetime > locsMe$night, "night", "day"))
             
 
