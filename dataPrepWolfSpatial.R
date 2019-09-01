@@ -426,7 +426,44 @@
         modDat$eastness <- ifelse(modDat$slope == 0, 0, modDat$eastness)
         modDat$east <- ifelse(modDat$slope == 0, 0, modDat$east)
 
-      
+  
+    #### format covariates for use in models ####
+
+    
+    modDatUpd <- modDat %>% mutate(
+      datetime = ymd_hms(datetime),
+      # handle datetimes and dates of course
+      Date = ymd(Date),
+      # standardize continuous covariates
+      slopeSt = (slope - mean(slope))/sd(slope),
+      elevSt = (elev - mean(elev))/sd(elev),
+      northnessSt = (northness - mean(northness))/sd(northness),
+      snowSt = (snowCm - mean(snowCm))/sd(snowCm),
+      canSt = (can - mean(can))/sd(can),
+      distRdSt = (distRd - mean(distRd))/sd(distRd),
+      distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
+      distFeedSt = (distFeed - mean(distFeed))/sd(distFeed),
+      activeFeedSt = (distFeedActive - mean(distFeedActive))/sd(distFeedActive),
+      # order landcover from most to least available
+      lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
+      # use open recreation as baseline; reorder for more intuitive plot interpretation
+      recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")),
+      # add binary private land designation
+      pvt = ifelse(recClass == "noRec", 1, 0),
+      # add binary off-trail/no off-trail use designation
+      otUse = ifelse(recClass == "noOT", 0, 1),
+      # add binary designation for whether moto rec is allowed
+      motoUse = ifelse(recClass == "allOT", 1, 0),
+      # add binary indicator of whether hunting was allowed that fall
+      hunt = ifelse(Year == 2013 | Year == 2014 | Year >= 2018, 1, 0),
+      # add binary indication of whether hunting was allowed in the previous year
+      prevHunt = ifelse(Year == 2014 | Year == 2015 | Year >= 2019, 1, 0),
+      # add time since hunting was first allowed (fall 2012, corresponds to winter 2013)
+      tSinceHunt = ifelse(Year - 2013 + 1 < 0, 0, Year - 2013 + 1),
+      # add years of continuous hunting (to account for no hunting 2014, 2015, 2016)
+      tContHunt = ifelse(Year == 2013, 1,
+                         ifelse(Year == 2014, 2,
+                                ifelse(Year >= 2018, Year - 2018 + 1, 0))))
         
         
     #### finish him ####
@@ -434,12 +471,12 @@
         
         ## make it spatial
         modDatSp <- SpatialPointsDataFrame(
-          data.frame("x" = modDat$X, "y" = modDat$Y),
-          modDat, proj4string = utm)
+          data.frame("x" = modDatUpd$X, "y" = modDatUpd$Y),
+          modDatUpd, proj4string = utm)
         
         
         ## export
-        write.csv(modDat, "modDat.csv", row.names = F)
+        write.csv(modDatUpd, "modDat.csv", row.names = F)
         writeOGR(modDatSp, paste0(datDir, "/Wolf"),
                  layer = "humanInfl-modDat",
                  driver = "ESRI Shapefile",
