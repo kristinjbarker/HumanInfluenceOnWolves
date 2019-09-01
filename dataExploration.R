@@ -112,37 +112,13 @@ rm(wd_kjb, wd_greg)
       datetime = ymd_hms(datetime),
       # handle datetimes and dates of course
       Date = ymd(Date),
-      # standardize continuous covariates
-      slopeSt = (slope - mean(slope))/sd(slope),
-      elevSt = (elev - mean(elev))/sd(elev),
-      northnessSt = (northness - mean(northness))/sd(northness),
-      snowSt = (snowCm - mean(snowCm))/sd(snowCm),
-      canSt = (can - mean(can))/sd(can),
-      distRdSt = (distRd - mean(distRd))/sd(distRd),
-      distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
-      distFeedSt = (distFeed - mean(distFeed))/sd(distFeed),
-      activeFeedSt = (distFeedActive - mean(distFeedActive))/sd(distFeedActive),
+      # year as numeric
+      Year = as.numeric(Year),
       # order landcover from most to least available
       lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
       # use open recreation as baseline; reorder for more intuitive plot interpretation
-      recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")),
-      # add binary private land designation
-      pvt = ifelse(recClass == "noRec", 1, 0),
-      # add binary off-trail/no off-trail use designation
-      otUse = ifelse(recClass == "noOT", 0, 1),
-      # add binary designation for whether moto rec is allowed
-      motoUse = ifelse(recClass == "allOT", 1, 0),
-      # add binary indicator of whether hunting was allowed that fall
-      hunt = ifelse(Year == 2013 | Year == 2014 | Year >= 2018, 1, 0),
-      # add binary indication of whether hunting was allowed in the previous year
-      prevHunt = ifelse(Year == 2014 | Year == 2015 | Year >= 2019, 1, 0),
-      # add time since hunting was first allowed (fall 2012, corresponds to winter 2013)
-      tSinceHunt = ifelse(Year - 2013 + 1 < 0, 0, Year - 2013 + 1),
-      # add years of continuous hunting (to account for no hunting 2014, 2015, 2016)
-      tContHunt = ifelse(Year == 2013, 1,
-                         ifelse(Year == 2014, 2,
-                                ifelse(Year >= 2018, Year - 2018 + 1, 0))))
-    
+      recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
+
     # split data for night and day (faster than filtering in model, i think) #
     datDay <- filter(modDat, daytime == "day")
     datNight <- filter(modDat, daytime == "night")    
@@ -169,47 +145,50 @@ rm(wd_kjb, wd_greg)
     # 
     # save.image("correlationsEnvt.RData")
 
+# 
+# 
+#     #### check correlations between human covariates ####
+# 
+#     dat.cor.h <- modDat %>%
+#       dplyr::select(distRd, distFeed, distStruc, recClass)
+# 
+#     source("pairs-panels.R")
+#     pairs.panels(dat.cor.h)
+# 
+#     save.image("correlations.RData")
+# 
+# 
 
-
-    #### check correlations between human covariates ####
-
-    dat.cor.h <- modDat %>%
-      dplyr::select(distRd, distFeed, distStruc, recClass)
-
-    source("pairs-panels.R")
-    pairs.panels(dat.cor.h)
-
-    save.image("correlations.RData")
-
-
-    
     #### check correlations between all environmental and human covariates ####
-    
+
     dat.cor <- modDat %>%
-      dplyr::select(can, elev, slope, snowCm, northness,
-                    distRd, distStruc, distFeed, distFeedActive)
+      dplyr::select(can, elev, slope, rug, snowCm, northness,
+                    distRd, distStruc, distFeed, distFeedActive, hunt, prevHunt, tSinceHunt, tContHunt)
     corDat <- cor(dat.cor)
-    pairs.panels(dat.cor)
-    
+    source("pairs-panels.R"); pairs.panels(dat.cor)
+
+
     # correlations >= 0.70
     cor7 <- corDat
     cor7[cor7 < 0.70] <- NA
     cor7
-    # just distFeed and distActiveFeed
-    
+    # just rug+slope, distFeed+distActiveFeed, most hunts with each other
+
     # correlations >= 0.60
     cor6 <- corDat
     cor6[cor6 < 0.60] <- NA
     cor6
     # same
-  
+
     # correlations >= 0.50
     cor5 <- corDat
     cor5[cor5 < 0.50] <- NA
     cor5
-    # distStruc & distRd 0.504, i think that's alright
-    
-    # take-home: no covariates so correlated that they can't be included in the same model
+    # now also elev+slope and elev+rug, but less correlated with slope so still sticking with that one
+    # also no elev+distStruc, as expected
+    # but these are all <0.51 so i feel alright about them
+
+    # take-home: choose slope over ruggedness
       
 
 
@@ -297,20 +276,28 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ###  
 
         
-      #### Specify models ####
+      #### Specify 'beyond optimal' models (following Zuur bk Chap 5.7) ####
         
         # no random effect  
         noreDay <- glm(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt), 
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2), 
                        family = binomial(logit),
                        data = datDay)
         noreNight <- glm(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt), 
-                         family = binomial(logit),
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2), 
+                       family = binomial(logit),
                          data = datNight)            
         
         # wolf-year only
@@ -318,39 +305,117 @@ rm(wd_kjb, wd_greg)
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
                        + (1|wolfYr), 
                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
                        data = datDay)
         wNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                         + (1|wolfYr), 
-                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
-                         data = datNight)        
-        
-        # wolf-year nested in pack
-        wpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + (1|Pack/wolfYr), 
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                         + (1|wolfYr), 
+                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = datNight)  
+        
+        # wolf-year only
+        pDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                       + (1|Pack), 
+                        family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                       data = datDay)
+        pNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                         + (1|Pack), 
+                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = datNight)   
+        
+        
+        # wolf and pack
+        wPpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                       + (1|wolfYr) + (1|Pack),
                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
                        data = datDay) 
-        wpNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
-                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+        wPpNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                       + (1|wolfYr) + (1|Pack), 
+                         family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                         data = datNight)           
+        
+        
+        # wolf-year nested in pack
+        wNpDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
+                       + (1|Pack/wolfYr),
+                        family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
+                       data = datDay) 
+        wNpNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                       + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                       + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
+                       + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                       + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
+                       + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
                          + (1|Pack/wolfYr), 
                          family = binomial(logit), control = glmerControl(optimizer = "nloptwrap", calc.derivs = FALSE), 
                          data = datNight)          
         
 
       #### Compete models ####
-        
-        AIC(noreDay, wDay, wpDay) # 
-        AIC(noreNight, wNight, wpNight) # 
           
+        # day - calculate and export
+        aicDay <- data.frame(AIC(noreDay, wDay, pDay, wPpDay, wNpDay), 
+                             randomEffect = c("None", "Wolf", "Pack", "wolfPlusPack", "WolfInPack"))
+        aicDay$LL <- c(logLik(noreDay), logLik(wDay), logLik(pDay), logLik(wPpDay), logLik(wNpDay))        
+        aicDay <- aicDay[order(aicDay$AIC), ]
+        aicDay$deltaAIC = aicDay$AIC - min(aicDay$AIC)
+        write.csv(aicDay, file = "aic-reStructure-Day.csv", row.names = FALSE)         
+  
+        # night - calculate and export
+        aicNight <- data.frame(AIC(noreNight, wNight, pNight, wPpNight, wNpNight), 
+                               randomEffect = c("None", "Wolf", "Pack", "wolfPlusPack", "WolfInPack"))
+        aicNight$LL <- c(logLik(noreNight), logLik(wNight), logLik(pNight), logLik(wPpNight), logLik(wNpNight))        
+        aicNight <- aicNight[order(aicNight$AIC), ]
+        aicNight$deltaAIC = aicNight$AIC - min(aicNight$AIC)
+        write.csv(aicNight, file = "aic-reStructure-Night.csv", row.names = FALSE)            
           
                    
 ################################################################################################## #  
