@@ -85,8 +85,9 @@ rm(wd_kjb, wd_greg)
     
       modDatRaw <- read.csv("modDat.csv")
 
-    #### Formatted data ####
 
+    #### Formatted data ####    
+      
       modDat <- modDatRaw %>% mutate(
         datetime = ymd_hms(datetime, tz = "America/Denver"),
         # handle datetimes and dates of course
@@ -97,11 +98,12 @@ rm(wd_kjb, wd_greg)
         lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
         # use open recreation as baseline; reorder for more intuitive plot interpretation
         recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
-
-    #### Subsetted day/night data ####
-    
+  
+      # split data for night and day (faster than filtering in model, i think) #
       modDatDay <- filter(modDat, daytime == "day")
-      modDatNight <- filter(modDat, daytime == "night")    
+      modDatNight <- filter(modDat, daytime == "night") 
+      modDatCrep <- filter(modDat, daytime == "crep")
+
       
 ################################################################################################## #  
   
@@ -111,15 +113,35 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### #
     
     
-    # daytime (from models-Environment.R)
-    envtDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+    # from models-Environment.R
+        
+    envtDay <- glmer(Used ~ 1 + canSt + slopeSt + elevSt + northnessSt + snowSt
                      + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                     + snowSt:canSt + snowSt:elevSt + snowSt:I(slopeSt*slopeSt) 
-                     + snowSt:I(elevSt*elevSt) + (1|Pack), family = binomial(logit), data = modDatDay,
-                     # allow convergence and speed processing
+                     + snowSt:canSt + snowSt:northnessSt + snowSt:elevSt + snowSt:I(elevSt*elevSt) 
+                     + (1|Pack), family = binomial(logit), data = modDatDay,
                      control = glmerControl(optimizer = "bobyqa", 
-                                            optCtrl=list(maxfun=2e4),
-                                            calc.derivs = FALSE))     
+                                            optCtrl=list(maxfun=3e4),
+                                            calc.derivs = FALSE)) 
+    
+
+      globNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:elevSt + snowSt:I(elevSt*elevSt) 
+                         + (1|Pack), family = binomial(logit), data = modDatNight,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                                optCtrl=list(maxfun=3e4),
+                                                calc.derivs = FALSE)) 
+      
+
+      globCrep <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                 + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                 + snowSt:canSt + snowSt:northnessSt + snowSt:elevSt
+                 + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                 + (1|Pack), family = binomial(logit), data = modDatCrep,
+                 control = glmerControl(optimizer = "bobyqa", 
+                                        optCtrl=list(maxfun=3e4),
+                                        calc.derivs = FALSE)) 
+            
 
                   
 ################################################################################################## #  
@@ -158,13 +180,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayLSM, file = "aicDayLSM.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayLSM <- subset(aicDayLSM, Delta_AICc < 2.0)
-      aic2DayLSM <- droplevels(aic2DayLSM)
-      aic2DayLSM$Modnames <- as.character(aic2DayLSM$Modnames)
+      aic4DayLSM <- subset(aicDayLSM, Delta_AICc < 4.0)
+      aic4DayLSM <- droplevels(aic4DayLSM)
+      aic4DayLSM$Modnames <- as.character(aic4DayLSM$Modnames)
       # save top-supported models
       topLSMs <- list()
       # list model names
-      topLSMnames <- unique(aic2DayLSM$Modnames)
+      topLSMnames <- unique(aic4DayLSM$Modnames)
       # store the models in the list
       for (i in 1:length(topLSMnames)) { topLSMs[[i]] <- get(topLSMnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -298,13 +320,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayDSM, file = "aicDayDSM.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayDSM <- subset(aicDayDSM, Delta_AICc < 2.0)
-      aic2DayDSM <- droplevels(aic2DayDSM)
-      aic2DayDSM$Modnames <- as.character(aic2DayDSM$Modnames)
+      aic4DayDSM <- subset(aicDayDSM, Delta_AICc < 4.0)
+      aic4DayDSM <- droplevels(aic4DayDSM)
+      aic4DayDSM$Modnames <- as.character(aic4DayDSM$Modnames)
       # save top-supported models
       topDSMs <- list()
       # list model names
-      topDSMnames <- unique(aic2DayDSM$Modnames)
+      topDSMnames <- unique(aic4DayDSM$Modnames)
       # store the models in the list
       for (i in 1:length(topDSMnames)) { topDSMs[[i]] <- get(topDSMnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -523,6 +545,7 @@ rm(wd_kjb, wd_greg)
           # all environment
           d66 <- update(envtDay, . ~ . + hunt:lcClass + hunt*can + hunt*slope + hunt*elev + hunt*northness
                        + hunt*snowSt + hunt*I(slope^2) + hunt:I(elev^2) + hunt:I(northness^2))
+          # model matrix is deficient; can't estimate it
           
           
           # canopy (i.e., hiding cover/escape terrain) only
@@ -544,13 +567,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayTSMA, file = "aicDayTSMA.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayTSMA <- subset(aicDayTSMA, Delta_AICc < 2.0)
-      aic2DayTSMA <- droplevels(aic2DayTSMA)
-      aic2DayTSMA$Modnames <- as.character(aic2DayTSMA$Modnames)
+      aic4DayTSMA <- subset(aicDayTSMA, Delta_AICc < 4.0)
+      aic4DayTSMA <- droplevels(aic4DayTSMA)
+      aic4DayTSMA$Modnames <- as.character(aic4DayTSMA$Modnames)
       # save top-supported models
       topTSMAs <- list()
       # list model names
-      topTSMAnames <- unique(aic2DayTSMA$Modnames)
+      topTSMAnames <- unique(aic4DayTSMA$Modnames)
       # store the models in the list
       for (i in 1:length(topTSMAnames)) { topTSMAs[[i]] <- get(topTSMAnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -799,13 +822,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayTSMB, file = "aicDayTSMB.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayTSMB <- subset(aicDayTSMB, Delta_AICc < 2.0)
-      aic2DayTSMB <- droplevels(aic2DayTSMB)
-      aic2DayTSMB$Modnames <- as.character(aic2DayTSMB$Modnames)
+      aic4DayTSMB <- subset(aicDayTSMB, Delta_AICc < 4.0)
+      aic4DayTSMB <- droplevels(aic4DayTSMB)
+      aic4DayTSMB$Modnames <- as.character(aic4DayTSMB$Modnames)
       # save top-supported models
       topTSMBs <- list()
       # list model names
-      topTSMBnames <- unique(aic2Day$Modnames)
+      topTSMBnames <- unique(aic4DayTSMB$Modnames)
       # store the models in the list
       for (i in 1:length(topTSMBnames)) { topTSMBs[[i]] <- get(topTSMBnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -1049,13 +1072,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayTSMC, file = "aicDayTSMC.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayTSMC <- subset(aicDayTSMC, Delta_AICc < 2.0)
-      aic2DayTSMC <- droplevels(aic2DayTSMC)
-      aic2DayTSMC$Modnames <- as.character(aic2DayTSMC$Modnames)
+      aic4DayTSMC <- subset(aicDayTSMC, Delta_AICc < 4.0)
+      aic4DayTSMC <- droplevels(aic4DayTSMC)
+      aic4DayTSMC$Modnames <- as.character(aic4DayTSMC$Modnames)
       # save top-supported models
       topTSMCs <- list()
       # list model names
-      topTSMCnames <- unique(aic2DayTSMC$Modnames)
+      topTSMCnames <- unique(aic4DayTSMC$Modnames)
       # store the models in the list
       for (i in 1:length(topTSMCnames)) { topTSMCs[[i]] <- get(topTSMCnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -1299,13 +1322,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayTSMD, file = "aicDayTSMD.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayTSMD <- subset(aicDayTSMD, Delta_AICc < 2.0)
-      aic2DayTSMD <- droplevels(aic2DayTSMD)
-      aic2DayTSMD$Modnames <- as.character(aic2DayTSMD$Modnames)
+      aic4DayTSMD <- subset(aicDayTSMD, Delta_AICc < 4.0)
+      aic4DayTSMD <- droplevels(aic4DayTSMD)
+      aic4DayTSMD$Modnames <- as.character(aic4DayTSMD$Modnames)
       # save top-supported models
       topTSMDs <- list()
       # list model names
-      topTSMDnames <- unique(aic2DayTSMD$Modnames)
+      topTSMDnames <- unique(aic4DayTSMD$Modnames)
       # store the models in the list
       for (i in 1:length(topTSMDnames)) { topTSMDs[[i]] <- get(topTSMDnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -1348,13 +1371,13 @@ rm(wd_kjb, wd_greg)
       # ... and store
       write.csv(aicDayRSM, file = "aicDayRSM.csv", row.names = FALSE)      
       # identify best-supported models (deltaAICc < 2)
-      aic2DayRSM <- subset(aicDayRSM, Delta_AICc < 2.0)
-      aic2DayRSM <- droplevels(aic2DayRSM)
-      aic2DayRSM$Modnames <- as.character(aic2DayRSM$Modnames)
+      aic4DayRSM <- subset(aicDayRSM, Delta_AICc < 4.0)
+      aic4DayRSM <- droplevels(aic4DayRSM)
+      aic4DayRSM$Modnames <- as.character(aic4DayRSM$Modnames)
       # save top-supported models
       topRSMs <- list()
       # list model names
-      topRSMnames <- unique(aic2DayRSM$Modnames)
+      topRSMnames <- unique(aic4DayRSM$Modnames)
       # store the models in the list
       for (i in 1:length(topRSMnames)) { topRSMs[[i]] <- get(topRSMnames[i]) }      
       # delete unsupported models and clear memory for next batch
@@ -1389,11 +1412,11 @@ rm(wd_kjb, wd_greg)
       write.csv(aic4All, "aic4-day.csv", row.names=F)
       
       # store and export subset of best-supported models (deltaAICc < 2)
-      aic2All <- subset(aicAll, Delta_AICc < 2.0); aic2All <- droplevels(aic2All)
-      write.csv(aic2All, "aic2-day.csv", row.names=F)  
+      aic4All <- subset(aicAll, Delta_AICc < 4.0); aic4All <- droplevels(aic4All)
+      write.csv(aic4All, "aic4-day.csv", row.names=F)  
       
       # view top-supported models
-      topAllMat <- matrix(aic2All$Modname)
+      topAllMat <- matrix(aic4All$Modname)
       # print summaries of all supported models 
       apply(topAllMat, 1, get)
       # store the top model
