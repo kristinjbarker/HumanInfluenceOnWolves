@@ -136,47 +136,26 @@ rm(wd_kjb, wd_greg)
                            + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                            + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
                            + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                           + (1|Pack/wolfYr), family = binomial(logit), data = datNight,
+                           + (1|Pack), family = binomial(logit), data = datNight,
                            control = glmerControl(optimizer = "bobyqa", 
                                                   optCtrl=list(maxfun=2e4),
                                                   calc.derivs = FALSE)) 
 
+        
         globCrep <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                    + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                    + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
                    + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                   + (1|Pack/wolfYr), family = binomial(logit), data = datCrep,
+                   + (1|Pack), family = binomial(logit), data = datCrep,
                    control = glmerControl(optimizer = "bobyqa", 
                                           optCtrl=list(maxfun=2e4),
                                           calc.derivs = FALSE)) 
             
         
       #### Evaluate relative covariate importance ####
-
         
-                
-        #### --day ####
         
-          summary(globCrep)
-        
-          # remove snow:northness2 and snow:northness2
-          crep2 <- update(globCrep, . ~ . - northnessSt:snowSt - snowSt:I(northnessSt*northnessSt))
-          aictab(c(globCrep, crep2), modnames = c("global", "m2"))
-          summary(crep2)
-        
-          # also remove snow*slope2 and snow*slope
-          crep3 <- update(crep2, . ~ . - snowSt:I(slopeSt * slopeSt) - slopeSt:snowSt)
-          aictab(c(globCrep, crep2, crep3), modnames = c("global", "m2", "m3"))
-          summary(crep3)
-          
-          # also remove northness
-          crep4 <- update(crep3, . ~ . - northnessSt)
-          aictab(c(globCrep, crep2, crep3, crep4), modnames = c("global", "m2", "m3", "m4"))
-          summary(crep4)
-          
-          
-        
-        #### --day ####
+       #### --day ####
 
           summary(globDay)
            
@@ -185,63 +164,133 @@ rm(wd_kjb, wd_greg)
           aictab(c(globDay, day2), modnames = c("global", "m2")) # day2 ftw 
           summary(day2)
           
-          # also remove snow:slope
-          day3 <- update(day2, . ~ . - snowSt:slopeSt)
-          aictab(c(globDay, day2, day3), modnames = c("global", "m2", "m3")) # day3 ftw 
-          summary(day3)
+          # also remove snow:northness
+          day3 <- update(day2, . ~ . - snowSt:northnessSt)
+          aictab(c(day3, day2), modnames = c("m3", "m2")) # day2 ftw (much better)
+          summary(day2)
           
-
-          # also remove landcover? (only 1 class is impt)
-          day4 <- update(day3, . ~ . - lcClass)
-          aictab(c(day4, day2, day3), modnames = c("m4", "m2", "m3"))# no diff 
+          # keep snow:northness. remove snow:slope and snow:slope2
+          day4 <- update(day2, . ~ . - snowSt:slopeSt - snowSt:I(slopeSt * slopeSt))
+          aictab(c(day4, day2), modnames = c("m4", "m2")) # day4, but pretty similar
           summary(day4)
           
-          # also remove elev:snow? (less impt than any remaining covariates)
-          day6 <- update(day4, . ~ . - elevSt:snowSt)     
-          AIC(day4, day6) #day4 ftw
+          # keep the snow:slopes but remove lc instead
+          day5 <- update(day2, . ~ . - lcClass)
+          aictab(c(day4, day2, day5), modnames = c("m4", "m2", "m5")) # day4 and day5 similar 
+          summary(day5)
           
-          # evaluate all along with LL to avoid incorrect conclusion
-          aicDay <- data.frame(aictab(cand.set = c(globDay, day2, day3, day4), 
-                            modnames = c("Global", "m2", "m3", "m4")))
-          aicDay$LL <- c(logLik(globDay), logLik(day2), logLik(day3), logLik(day4))        
+          # remove both snow:slopes and landcover
+          day6 <- update(day4, . ~ . - lcClass)
+          aictab(c(day4, day2, day5, day6), modnames = c("m4", "m2", "m5", "m6")) # ugh so similar
+          
+
+          
+          # store results of all models
+          aicDay <- data.frame(aictab(cand.set = c(globDay, day2, day3, day4, day5, day6), 
+                            modnames = c("Global", "m2", "m3", "m4", "m5", "m6")))
           aicDay <- aicDay[order(aicDay$Delta_AICc), ]
-          write.csv(aicDay, file = "aic-envt-Day.csv", row.names = FALSE)                   
+          write.csv(aicDay, file = "aic-envt-Day.csv", row.names = FALSE)      
           
-          # rolling with day4
+          
+          #### decide between day3, day4, day5, day6 ####
+          
+            # residual plots
+            par(mfrow = c(2,2))
+            binnedplot(fitted(day3), residuals(day3, type = "response"), main = "day3")
+            binnedplot(fitted(day4), residuals(day3, type = "response"), main = "day4")
+            binnedplot(fitted(day5), residuals(day5, type = "response"), main = "day5")
+            binnedplot(fitted(day6), residuals(day6, type = "response"), main = "day6")
+            par(mfrow = c(1,1))
+            
+            # either day5 or day6 based on these
+            # day 5 has more outliers so i'm rolling with 6
+            
+            # day6, final answer
 
-          
-          
 
+            
+            
         #### --night ####  
           
           summary(globNight)
         
-          # remove snow:northness2 
-          night2 <- update(globNight, . ~ . - snowSt:I(northnessSt*northnessSt))
+          # remove snow:slope and snow:slope2 
+          night2 <- update(globNight, . ~ . - slopeSt:snowSt- snowSt:I(slopeSt * slopeSt))
           aictab(c(globNight, night2), modnames = c("global", "m2")) # night2 ftw
           summary(night2)
           
-          # also remove snow:slope and snow:slope2
-          night3 <- update(night2, . ~ . - snowSt:slopeSt - snowSt:I(slopeSt*slopeSt))
+          
+          # also remove snow:northness and snow:northness2
+          night3 <- update(night2, . ~ . - northnessSt:snowSt- snowSt:I(northnessSt * northnessSt))
           aictab(c(night3, night2), modnames = c("m3", "m2")) # night3 ftw
-          summary(night3)
+          summary(night3)       
           
-          # also remove snow:northness
-          night4 <- update(night3, . ~ . - northnessSt:snowSt)
-          aictab(c(night4, night3, night2), modnames = c("m4", "m3", "m2"))
-          summary(night4)
+          # also remove landcover
+          night4 <- update(night3, . ~ . - lcClass)
+          aictab(c(night3, night4), modnames = c("m3", "m4"))  # night3 ftw
           
-          # evaluate all along with LL to avoid incorrect conclusion
-          aicNight <- data.frame(aictab(cand.set = c(globNight, night2, night3, night4), 
-                            modnames = c("Global", "m2", "m3", "m4")))
-          aicNight$LL <- c(logLik(globNight), logLik(night2), logLik(night3), logLik(night4))        
+          # leave landcover. remove northness2?
+          night5 <- update(night3, . ~ . - I(northnessSt * northnessSt))
+          aictab(c(night3, night5), modnames = c("m3", "m5")) # night3 ftw
+          
+
+          
+          # store results of all models
+          aicNight <- data.frame(aictab(cand.set = c(globNight, night2, night3, night4, night5), 
+                            modnames = c("Global", "m2", "m3", "m4", "m5")))
           aicNight <- aicNight[order(aicNight$Delta_AICc), ]
-          write.csv(aicNight, file = "aic-envt-Night.csv", row.names = FALSE)            
-
-
+          write.csv(aicNight, file = "aic-envt-Night.csv", row.names = FALSE) 
           
-               
+          
+          #### decide between night4 and night5 #### 
 
+            # residual plots
+            par(mfrow = c(2,1))
+            binnedplot(fitted(night4), residuals(night4, type = "response"), main = "night4")
+            binnedplot(fitted(night5), residuals(night5, type = "response"), main = "night5")
+            par(mfrow = c(1,1))
+            
+            # night3, final answer
+          
+
+            
+        #### --crepuscular ####
+        
+          summary(globCrep)
+        
+          # remove slope:snow and snow:slope2
+          c2 <- update(globCrep, . ~ . - slopeSt:snowSt - snowSt:I(slopeSt * slopeSt))
+          aictab(c(globCrep, c2), modnames = c("global", "c2")) #c2 ftw
+          summary(c2)    
+          
+          # also remove snow:northness and snow:northness2
+          c3 <- update(c2, . ~ . - northnessSt:snowSt  - snowSt:I(northnessSt * northnessSt))
+          aictab(c(c2, c3), modnames = c("c2", "c3")) # c2 ftw
+          summary(c2)
+        
+          # keep snow:northness; just remove snow:northness2
+          c4 <- update(c2, . ~ . - snowSt:I(northnessSt * northnessSt))
+          aictab(c(c2, c4), modnames = c("c2", "c4")) # similar
+          summary(c2)   
+          summary(c4)
+          
+          # store results of all models
+          aicCrep <- data.frame(aictab(cand.set = c(globCrep, c2, c3, c4), 
+                            modnames = c("Global", "c2", "c3", "c4")))
+          aicCrep <- aicCrep[order(aicCrep$Delta_AICc), ]
+          write.csv(aicCrep, file = "aic-envt-Crep.csv", row.names = FALSE) 
+          
+          
+          ## decide between c2 and c4 ##
+               
+            # residual plots
+            par(mfrow = c(2,1))
+            binnedplot(fitted(c2), residuals(night4, type = "response"), main = "crep2")
+            binnedplot(fitted(c4), residuals(night5, type = "response"), main = "crep4")
+            par(mfrow = c(1,1))
+            
+            # crep2, final answer
+            
  
 ################################################################################################## #  
   
@@ -255,61 +304,28 @@ rm(wd_kjb, wd_greg)
 
       #### Specify top environmental models ####
           
-          # envtDay <- day4
-          envtDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
-                           + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                           + snowSt:canSt + snowSt:elevSt + snowSt:I(slopeSt*slopeSt) 
-                           + snowSt:I(elevSt*elevSt) + (1|Pack/wolfYr), 
-                           family = binomial(logit), data = datDay,
-                           control = glmerControl(optimizer = "bobyqa", 
-                                                  optCtrl=list(maxfun=2e4),
-                                                  calc.derivs = FALSE))           
-        ## binned residual plots ##
-        
-          # day - whole model
-          binnedplot(fitted(envtDay), residuals(envtDay, type = "response"), main = "Day - full model") # YAY
-          
-          # day - individual covariates
-          binnedplot(datDay$canSt, residuals(envtDay, type = "response"), main = "Day - canopy")
-          binnedplot(datDay$slopeSt, residuals(envtDay, type = "response"), main = "Day - slope")
-          binnedplot(datDay$elevSt, residuals(envtDay, type = "response"), main = "Day - elevation")
-          binnedplot(datDay$northnessSt, residuals(envtDay, type = "response"), main = "Day - northness")
-          binnedplot(datDay$snowSt, residuals(envtDay, type = "response"), main = "Day - snow")   
-          
-          # night - whole model
-          binnedplot(fitted(envtNight), residuals(envtNight, type = "response"), main = "Night - full model")
-          
-           
-          # night - individual covariates
-          binnedplot(datNight$canSt, residuals(envtNight, type = "response"), main = "Night - canopy")
-          binnedplot(datNight$slopeSt, residuals(envtNight, type = "response"), main = "Night - slope")
-          binnedplot(datNight$elevSt, residuals(envtNight, type = "response"), main = "Night - elevation")
-          binnedplot(datNight$northnessSt, residuals(envtNight, type = "response"), main = "Night - northness")
-          binnedplot(datNight$snowSt, residuals(envtNight, type = "response"), main = "Night - snow")           
+          # envtDay <- day5
+          # envtNight <- night4
+          # envtCrep <- c2
           
 
-        ## area under the roc curve ##
+        ## ROC AUC ##
           
-          # day
-          invisible(plot(roc(factor(ifelse(datDay$Used == 1, 1, 0)), fitted(envtDay)), 
-                         print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.676
-          
-          # night
-          invisible(plot(roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(envtNight)), 
-                         print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.676          
+          # 0.657 day | 0.678 night | 0.659 crep
+          invisible(plot(roc(factor(ifelse(datDay$Used == 1, 1, 0)), fitted(day5)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
+          invisible(plot(roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(night4)), print.thres = c(.1, .5), col = "red", print.auc = T))  
+          invisible(plot(roc(factor(ifelse(datCrep$Used == 1, 1, 0)), fitted(c2)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
           
           
         ## predictive accuracy @ >50% ##  
           
-          # day
-          confusionMatrix(factor(as.character(ifelse(fitted(envtDay) > 0.5, "Yes", "No"))), 
-                          factor(ifelse(datDay$Used == 1, "Yes", "No")), positive = "Yes") # 63% 
-          
-          # night
-          confusionMatrix(factor(as.character(ifelse(fitted(envtNight) > 0.5, "Yes", "No"))), 
-                          factor(ifelse(datNight$Used == 1, "Yes", "No")), positive = "Yes") # 62%           
-          
+          # 61.71% day | 63.39% night | 60.71% crep
+          confusionMatrix(factor(as.character(ifelse(fitted(day5) > 0.5, "Yes", "No"))), factor(ifelse(datDay$Used == 1, "Yes", "No")), positive = "Yes")
+          confusionMatrix(factor(as.character(ifelse(fitted(night4) > 0.5, "Yes", "No"))), factor(ifelse(datNight$Used == 1, "Yes", "No")), positive = "Yes")         
+          confusionMatrix(factor(as.character(ifelse(fitted(c2) > 0.5, "Yes", "No"))), factor(ifelse(datCrep$Used == 1, "Yes", "No")), positive = "Yes")         
 
+          
+    
 
         
 ################################################################################################## #  
