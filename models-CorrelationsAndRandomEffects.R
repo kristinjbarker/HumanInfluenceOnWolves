@@ -105,9 +105,6 @@ rm(wd_kjb, wd_greg)
       # use open recreation as baseline; reorder for more intuitive plot interpretation
       recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
 
-    # split data for night and day (faster than filtering in model, i think) #
-    datDay <- filter(modDat, daytime == "day")
-    datNight <- filter(modDat, daytime == "night")    
 
     
 ################################################################################################## #  
@@ -249,6 +246,7 @@ rm(wd_kjb, wd_greg)
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2), 
                        family = binomial(logit), data = modDat)
 
+
         # wolf-year only
         w <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
@@ -293,6 +291,7 @@ rm(wd_kjb, wd_greg)
                        control = glmerControl(optimizer = "bobyqa", 
                                               optCtrl=list(maxfun=2e4),
                                               calc.derivs = FALSE))
+        
 
 
       #### Compete models ####
@@ -301,7 +300,9 @@ rm(wd_kjb, wd_greg)
         # day - calculate and export
         aicD <- data.frame(aictab(cand.set = c(w, p, wNp), 
                                     modnames = c("Wolf", "Pack", "WolfInPack")))
-        aicD <- aicD[order(aicD$Delta_AICc), ]
+        aicD <- aicD[order(aicD$Delta_AICc), ] # pack only ftw
+        # quick slightly-biased comparison to fixed effects only model
+        AIC(nore, w, p, wNp) # pack only ftw
         write.csv(aicD, file = "aic-RE-structure.csv", row.names = FALSE)         
 
                    
