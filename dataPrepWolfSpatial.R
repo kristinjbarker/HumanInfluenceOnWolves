@@ -90,12 +90,7 @@
     
     # kill sites: used & available
     # kills <- read.csv("killSites.csv")
-    
-    
-    # winter home ranges
-    winHrs <- readOGR(paste0(datDir, "/Wolf"), layer = 'winHRswolf')
-        
-    
+
         
      #### Raster and snowtel data #### 
     
@@ -119,6 +114,8 @@
       # roads
       motoUTM <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoads')
       motoAEA <- spTransform(motoUTM, aea)
+      motoPavUTM <- readOGR(paste0(datDir, "/Human/Roads"), layer = 'winterRoadsPaved')
+      motoPavAEA <- spTransform(motoPavUTM, aea)
 
       
       # feedgrounds
@@ -193,14 +190,21 @@
         
         # calculate shortest distance from each point to a road
         distRdRaw <- gDistance(locsAEA, motoAEA, byid = TRUE)
-        
-    
-        # make distance longform
+
+        # make longform
         distRd <- data.frame(
           rowNum = colnames(distRdRaw),
           distRd = distRdRaw[1,])
         
+        # calculate shortest distance from each point to a paved, plowed road
+        distRdPavRaw <- gDistance(locsAEA, motoPavAEA, byid = TRUE)
         
+        # make longform
+        distRdPav <- data.frame(
+          rowNum = colnames(distRdPavRaw),
+          distRdPav = distRdPavRaw[1,])        
+        
+      
         
       #### Feedgrounds ####      
         
@@ -296,25 +300,15 @@
         
       #### Combine all distances ####
         
-        
-        # determine whether wolf actually had feedgrounds available with 1km of its winter range
-        availFeed <- data.frame(gIntersects(feedUTM, gBuffer(winHrs, byid = TRUE, width = 1000), byid = TRUE))
-        availFeed$feedIn <- apply(availFeed, 1, any)
-        availFeed$wolfYr <- winHrs$id
-        availFeed <- dplyr::select(availFeed, wolfYr, feedIn)
 
-        
         # join all distance values back to main dataframe
         distDat <- locsAEA@data %>%
           mutate(rowNum = rownames(locsAEA@data)) %>%
           left_join(distRd, by = "rowNum") %>%
+          left_join(distRdPav, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
           left_join(distFeedActive, by = "rowNum") %>%
-          left_join(distStruc, by = "rowNum") %>%
-          left_join(availFeed, by = "wolfYr") %>%
-          # if wolf had no feedgrounds available, make those distances NA
-          mutate(distFeed = ifelse(feedIn == FALSE, NA, distFeed),
-                 distFeedActive = ifelse(feedIn == FALSE, NA, distFeedActive))
+          left_join(distStruc, by = "rowNum") 
    
 
 ################################################################################################## #  
@@ -377,11 +371,11 @@
     #### combine all covariate data ####
     
       modDatRaw <- distDat %>%
-        dplyr::select(c(rowNum, distRd, distFeed, distFeedActive, distStruc)) %>% # , distPrey)) %>%
+        dplyr::select(c(rowNum, distRd, distRdPav, distFeed, distFeedActive, distStruc)) %>% # , distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, snowCm, 
-                        distRd, distFeed, distFeedActive, distStruc, # distPrey, 
+                        distRd, distRdPav, distFeed, distFeedActive, distStruc, # distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum))
       
@@ -460,6 +454,7 @@
       snowSt = (snowCm - mean(snowCm))/sd(snowCm),
       canSt = (can - mean(can))/sd(can),
       distRdSt = (distRd - mean(distRd))/sd(distRd),
+      distRdPavSt = (distRdPav - mean(distRdPav))/sd(distRdPav),
       distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
       distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T),
       activeFeedSt = (distFeedActive - mean(distFeedActive, na.rm = T))/sd(distFeedActive, na.rm = T),
