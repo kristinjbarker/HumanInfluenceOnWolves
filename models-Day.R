@@ -1,6 +1,6 @@
            ### ### ### ### ### ###  ### ### ### ### ### ### ### ### ### ### ### ### 
            #                                                                      #
-           #        SUMMARIES, VISUALIZATIONS, AND PRELIMINARY DATA WORK          #
+           #                          DAYTIME MODELS                              #
            #  FOR ASSESSING HUMAN INFLUENCE ON WOLF DISTRIBUTIONS AND BEHAVIORS   #
            #                                                                      #
            #                      Kristin Barker | Summer 2019                    #
@@ -11,31 +11,24 @@
 
 ################################################################################################## #
 
+
 ### ### ### ### ### #
 ####  | SETUP |  ####
 ### ### ### ### ### #
 
-
   
-  #### Set working directory and filepath to spatial data ####
+  #### Set working directory and filepath ####
 
+    wd_kjb <- "C:\\Users\\Kristin\\Box Sync\\Documents\\HumanInfluenceOnWolves"
+    wd_greg <- "C:\\Users\\krist\\Documents\\HumanInfluenceOnWolves"
+    if (file.exists(wd_kjb)) { setwd(wd_kjb); datName <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data"
+    } else {
+      setwd(wd_greg); datName <- "C:\\Users\\krist\\Documents\\Data"
+    }
+    rm(wd_kjb, wd_greg)
 
-#### Set working directory, identify correct google database, and run correct cluster prep code ####
-
-wd_kjb <- "C:\\Users\\Kristin\\Box Sync\\Documents\\HumanInfluenceOnWolves"
-wd_greg <- "C:\\Users\\krist\\Documents\\HumanInfluenceOnWolves"
-
-if (file.exists(wd_kjb)) { setwd(wd_kjb); datName <- "C:\\Users\\Kristin\\Box Sync\\Documents\\Data"
-} else {
-  setwd(wd_greg); datName <- "C:\\Users\\krist\\Documents\\Data"
-}
-rm(wd_kjb, wd_greg)
-
-
-  
 
   #### Install and load any necessary packages you don't already have ####
-  
     
     # list of packages needed
     packages <- c(
@@ -134,10 +127,10 @@ rm(wd_kjb, wd_greg)
     #### models ####      
 
       # roads & buildings, linear
-      lsm1 <- update(envtDay, . ~ . + distRdSt + distStrucSt)
+      lsm1 <- update(envtDay, . ~ . + distRdPavSt + distStrucSt)
 
       # roads & buildings, quadratic
-      lsm2 <- update(envtDay, . ~ . + distRdSt + distStrucSt + I(distRdSt^2) + I(distStrucSt^2))
+      lsm2 <- update(envtDay, . ~ . + distRdPavSt + distStrucSt + I(distRdPavSt^2) + I(distStrucSt^2))
 
       # buildings only, linear
       lsm3 <- update(envtDay, . ~ . + distStrucSt)
@@ -871,92 +864,64 @@ rm(wd_kjb, wd_greg)
       
       # identify moderately-supported models (deltaAICc < 4); export results
       aic4Day <- subset(aicDay, Delta_AICc < 4.0)
+      aic4Day <- droplevels(aic4Day)
       write.csv(aic2Day, file = "aicModerateDay.csv", row.names = FALSE)           
       
       # identify best-supported models (deltaAICc < 2); export results
       aic2Day <- subset(aicDay, Delta_AICc < 2.0)
+      aic2Day <- droplevels(aic2Day)
       write.csv(aic2Day, file = "aicTopDay.csv", row.names = FALSE)     
 
       
       
 ################################################################################################## #  
 
-      
-
-      # 2. fix those envt models - they worked yesterday? (66 and 106)
-      
-    
-### ### ### ### ### ### ### ### 
-#### | OLDER CODE |  ####
-### ### ### ### ### ### ### ###      
-
-      # create a dataframe of aicc results...
-      aicDay <- data.frame(aictab(cand.set = topMods, modnames = topModNames))
-      # ...sorted from smallest to largest aicc value...
-      aicDay <- aicDay[order(aicDay$Delta_AICc), ]
-      # ... and store
-      write.csv(aicDay, file = "aicTopDay.csv", row.names = FALSE)      
-      # identify best-supported models (deltaAICc < 2)
-      aic2Day <- subset(aicDay, Delta_AICc < 2.0)
-      aic2Day <- droplevels(aic2Day)
-      aic2Day$Modnames <- as.character(aic2Day$Modnames)
-      
-      
-      
-      
-      # dataframe of aicc results...
-      aicAll <- data.frame(aictab(cand.set = topMods, modnames = names(topMods)))
-      
-      # ...sorted from smallest to largest aicc value...
-      aicAll <- aicAll[order(aicAll$Delta_AICc), ]
-      
-      # .. and exported
-      write.csv(aicAll, "aic-day.csv", row.names=F)
-      
-      # store and export subset of moderately-supported models (deltaAICc < 4)
-      aic4All <- subset(aicAll, Delta_AICc < 4.0); aic4All <- droplevels(aic4All)
-      write.csv(aic4All, "aic4-day.csv", row.names=F)
-      
-      # store and export subset of best-supported models (deltaAICc < 2)
-      aic4All <- subset(aicAll, Delta_AICc < 4.0); aic4All <- droplevels(aic4All)
-      write.csv(aic4All, "aic4-day.csv", row.names=F)  
-      
-      # view top-supported models
-      topAllMat <- matrix(aic4All$Modname)
-      # print summaries of all supported models 
-      apply(topAllMat, 1, get)
-      # store the top model
-      topModDay <- apply(topAllMat, 1, get)[[1]]
-
-      
-      
-      
-
-      
-################################################################################################## # 
-      
+ 
     
 ### ### ### ### ### ### ### ### ###
 #### | TOP MODEL DIAGNOSTICS|  ####
 ### ### ### ### ### ### ### ### ###   
       
-      summary(topModDay)
+      topDay <- get(as.character(aic2Day[1,"Modnames"]))
     
       ## area under the roc curve ##
-      invisible(plot(roc(factor(ifelse(modDatDay$Used == 1, 1, 0)), fitted(topModDay)), 
-                     print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 
+      invisible(plot(roc(factor(ifelse(modDatDay$Used == 1, 1, 0)), fitted(topDay)), 
+                     print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.722
       
       ## predictive accuracy @ >50% ##  
-      confusionMatrix(factor(as.character(ifelse(fitted(topModDay) > 0.5, "Yes", "No"))), 
+      confusionMatrix(factor(as.character(ifelse(fitted(topDay) > 0.5, "Yes", "No"))), 
                       factor(ifelse(modDatDay$Used == 1, "Yes", "No")), positive = "Yes") # 
     
       
       ## binned residual plots ##
-      binnedplot(fitted(topModDay), residuals(topModDay, type = "response"), main = "Day - top model")
+      binnedplot(fitted(topDay), residuals(topDay, type = "response"), main = "Day - top model")
 
  
 
-          
+       
+################################################################################################## #  
+
+################################################################################################## #  
+             
+################################################################################################## #  
+save.image(paste0("modelsHumanDay", today(), ".RData"))    
+# 0904 - 0924ish    
+################################################################################################## #  
+       
+################################################################################################## #  
+
+################################################################################################## #  
+             
+      
+
+      
+      
+### ### ### ### ### ### ### ### ###
+#### | OLDER CODE TO CUT/REAPPROPRIATE|  ####
+### ### ### ### ### ### ### ### ###   
+               
+      
+      
           # extract estimates from model summary
           topDayEsts <- data.frame(
             Covariate = rownames(coef(summary(topModDay))),
