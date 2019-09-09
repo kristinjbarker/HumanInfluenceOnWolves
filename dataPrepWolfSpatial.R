@@ -86,6 +86,9 @@
       mutate(wolfYr = as.character(wolfYr),
              Date = ymd(Date),
              Year = substr(wolfYr, nchar(wolfYr) - 3, nchar(wolfYr)))
+    
+    # winter home ranges
+    winHRs <- readOGR(paste0(datDir, "/Wolf"), layer = "winHRswolf")
 
     
     # kill sites: used & available
@@ -229,7 +232,14 @@
         distFeedActive <- data.frame(
           rowNum = names(distFeedActiveMin),
           distFeedActive = distFeedActiveMin)
- 
+        
+        # determine whether wolf had feedground avail within 1km of its winter range
+        availFeed <- data.frame(gIntersects(feedUTM, gBuffer(winHRs, byid = TRUE, width = 1000), byid = TRUE))
+        availFeed$feedIn <- apply(availFeed, 1, any)
+        availFeed$wolfYr <- winHRs$id        
+        availFeed <- availFeed %>%
+          dplyr::select(wolfYr, feedIn) %>%
+          mutate(feedIn = ifelse(feedIn == TRUE, 1, 0))
 
 
       #### Structures ### 
@@ -308,6 +318,7 @@
           left_join(distRdPav, by = "rowNum") %>%
           left_join(distFeed, by = "rowNum") %>%
           left_join(distFeedActive, by = "rowNum") %>%
+          left_join(availFeed, by = "wolfYr") %>%
           left_join(distStruc, by = "rowNum") 
    
 
@@ -371,13 +382,13 @@
     #### combine all covariate data ####
     
       modDatRaw <- distDat %>%
-        dplyr::select(c(rowNum, distRd, distRdPav, distFeed, distFeedActive, distStruc)) %>% # , distPrey)) %>%
+        dplyr::select(rowNum, distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc) %>% # , distPrey)) %>%
         left_join(extSnow, by = "rowNum") %>%
-        dplyr::select(c(wolfYr, Wolf, Pack, Used, daytime,
+        dplyr::select(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, snowCm, 
-                        distRd, distRdPav, distFeed, distFeedActive, distStruc, # distPrey, 
+                        distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc, # distPrey, 
                         datetime, Date, Time, Month, Day, Year,
-                        X, Y, Latitude, Longitude, rowNum))
+                        X, Y, Latitude, Longitude, rowNum)
       
     
     #### map landcover values to landcover type ####
