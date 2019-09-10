@@ -1559,8 +1559,51 @@
          z2 <- update(envtDay, . ~ . + distRdSt + distStrucSt + I(distRdSt^2) + I(distStrucSt^2),
                      control = glmerControl(optimizer = "bobyqa")) 
          # oh. that worked. i'll just do that for everything i guess.
+         
+         
+         
+         
+     #### issues after first full day run using the above fix ####
+         
 
-  
+          # d111, 114, & 115: tSinceHunt * rd, struc, feed
+          # warning messages: maximum number of function evaluations exceeded from bobyqa
+            
+            # first pass: increase max iterations even more (optCtrl=list(maxfun=4e4))
+            # yeah that worked
+            # trying with just 3e4 cuz aint nobody got time for that
+            
+            
+          # quadratic, predictable feedgrounds, canopy
+          d111 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + activeFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(activeFeedSt^2)
+                       +  tSinceHunt*distRdSt +  tSinceHunt*distStrucSt +  tSinceHunt*recClass +  tSinceHunt*activeFeedSt
+                       +  tSinceHunt*I(distRdSt^2) +  tSinceHunt*I(distStrucSt^2) +  tSinceHunt*I(activeFeedSt^2)
+                       + tSinceHunt*canSt,
+                                            control = glmerControl(optimizer = "bobyqa", 
+                                            optCtrl=list(maxfun=3e4),
+                                            calc.derivs = FALSE))  
+          
+          # quadratic, all feedgrounds
+          d114 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt
+                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2),
+                                            control = glmerControl(optimizer = "bobyqa", 
+                                            optCtrl=list(maxfun=3e4),
+                                            calc.derivs = FALSE))
+          
+          # quadratic, all feedgrounds, canopy
+          d115 <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + tSinceHunt*distRdSt + tSinceHunt*distStrucSt + tSinceHunt*recClass + tSinceHunt*distFeedSt
+                       + tSinceHunt*I(distRdSt^2) + tSinceHunt*I(distStrucSt^2) + tSinceHunt*I(distFeedSt^2)
+                       + tSinceHunt*canSt,
+                                            control = glmerControl(optimizer = "bobyqa", 
+                                            optCtrl=list(maxfun=3e4),
+                                            calc.derivs = FALSE))        
+ 
+          
 ################################################################################################## #  
   
     
@@ -1593,3 +1636,233 @@
                    
          # need to put this in wolfYr code and randomly select one of each, then you're good to go
          # when you select random effects stucture just use all the data, not sep day/night/crep
+         
+         
+          
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### 
+####   | FIXING 1ST PASS MODELS |  ####
+### ### ### ### ### ### ### ### ###         
+                  
+         
+        # d66X, d106X, d111Y, d114Y, d115Y, d146X, d186X
+         
+         # d66, d106, d146, 186: hunt * slope, elev, and aspect
+         # prevHunt tSinceHunt tContHunt
+         # messages: model matrix rank deficient (yeah kristin this isn't a convergence issue)
+          
+          d66 <- update(envtDay, . ~ . + hunt:lcClass + hunt:canSt + hunt:slopeSt + hunt:elevSt + hunt:northnessSt
+                        + hunt:snowSt + hunt:I(slopeSt^2) + hunt:I(elevSt^2) + hunt:I(northnessSt^2))
+       
+          d106 <- update(envtDay, . ~ . + hunt:lcClass + hunt:canSt + hunt:slopeSt + hunt:elevSt + hunt:northnessSt
+                         + hunt:snowSt + hunt:I(slopeSt^2) + hunt:I(elevSt^2) + hunt:I(northnessSt^2))   
+          
+          d146 <- update(envtDay, . ~ . + hunt:lcClass + hunt:canSt + hunt:slopeSt + hunt:elevSt + hunt:northnessSt
+                         + hunt:snowSt + hunt:I(slopeSt^2) + hunt:I(elevSt^2) + hunt:I(northnessSt^2))
+          
+          d186 <- update(envtDay, . ~ . + hunt:lcClass + hunt:canSt + hunt:slopeSt + hunt:elevSt + hunt:northnessSt
+                         + hunt:snowSt + hunt:I(slopeSt^2) + hunt:I(elevSt^2) + hunt:I(northnessSt^2))
+          
+            
+            # this *does* work when just interacted with canopy but not when interacted with everything else
+            # oh i think i may have typed out the model wrong with the interactions. christ. 
+            # not sure if i hope that's the issue or not haha
+            
+            d66b <- update(envtDay, . ~ . + hunt:lcClass + hunt:canSt + hunt:slopeSt + hunt:elevSt + hunt:northnessSt
+                         + hunt:snowSt + hunt:I(slopeSt^2) + hunt:I(elevSt^2) + hunt:I(northnessSt^2))
+            
+            ## OH SHIT the environmental model changed and now has fewer covariates - so i need to remove those from all these fml
+            
+                envtDay <- glmer(Used ~ 1 + canSt + slopeSt + elevSt + northnessSt + snowSt
+                     + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                     + snowSt:canSt + snowSt:northnessSt + snowSt:elevSt + snowSt:I(elevSt*elevSt) 
+                     + (1|Pack), family = binomial(logit), data = modDatDay,
+                     control = glmerControl(optimizer = "bobyqa", 
+                                            optCtrl=list(maxfun=3e4),
+                                            calc.derivs = FALSE)) 
+                
+                # can 
+                # slope AND slope2
+                # elev AND elev2
+                # northness AND northness2
+                # snow
+                  # snow:can
+                  # snow:northness
+                  # snow*elev AND snow*elev2
+                
+                
+                # aic ####
+                
+                z <- aicDay %>%
+                  dplyr::select(AICc, LL) %>%
+                  duplicated()
+                any(z == TRUE)
+                which(z == TRUE)
+                zz <- aicDay[which(z == TRUE),]
+                View(zz)
+                # steal smarter peoples code
+                
+                d <- aicDay
+                indDuplicatedVec <- duplicated(d[,c("AICc", "LL")]) | duplicated(d[,c("AICc", "LL")], fromLast = TRUE)
+                myDuplicates <- d[indDuplicatedVec, ]
+                View(myDuplicates)
+                # hahah duh these are just the models i renumbered and reran
+                
+                # one more time without those included
+                d <- aicDay
+                indDuplicatedVec <- duplicated(d[,c("AICc", "LL")]) | duplicated(d[,c("AICc", "LL")], fromLast = TRUE)
+                myDuplicates <- d[indDuplicatedVec, ]
+                View(myDuplicates)            
+                # aaand a typo in the updated hunt:envt models. nice work.
+                
+                
+                
+                
+          
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### 
+####   | RANK DEFICIENCY |  ####
+### ### ### ### ### ### ### ### ###         
+                                  
+    # this happens with models of hunt:environmental covariates only
+    # but not with hunt: just canopy
+    
+    z <-  update(envtDay, . ~ . + hunt*canSt + hunt*slopeSt + hunt*elevSt + hunt*northnessSt
+                 + hunt*snowSt + hunt*I(slopeSt^2) + hunt*I(elevSt^2) + hunt*I(northnessSt^2))
+    # i'm wondering whether it has to do with the face that elev2 is alread interacted with snow
+    # so ill remove that first
+    update(envtDay, . ~ . + hunt*canSt + hunt*slopeSt + hunt*elevSt + hunt*northnessSt
+                 + hunt*snowSt + hunt*I(slopeSt^2) + hunt*I(northnessSt^2))    
+    # better. i think it's actually all the squared interactions.
+    summary(z)
+    zz <- update(envtDay, . ~ . + hunt*canSt + hunt*slopeSt + hunt*elevSt + hunt*northnessSt
+                 + hunt*snowSt)    
+    # yeah that fixes it
+    summary(zz)    
+    # so it's a model complexity issue, i think. Im going to remove those quadratic interactions
+                
+                
+                
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### 
+####   | FEED AVAIL UUUUUGH |  ####
+### ### ### ### ### ### ### ### ###                 
+                
+  
+
+    # ran top of models-day to get envtal model
+    summary(modDatDay$feedIn)
+    
+    # update data to be NA if no feed avail
+    newDat <- modDatDay %>%
+      mutate(distFeed = ifelse(feedIn == 0, NA, distFeed),
+             distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T))
+    summary(newDat$distFeed)
+    summary(newDat$distFeedSt)
+    summary(modDatDay$distFeedSt)
+    
+    # update standardized data
+    newDat$distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T)
+    
+    # update model to the feedground one but only use avail feedground info for it
+    newMod <- update(envtDay, . ~ . + distRdSt + distStrucSt + distFeedSt
+                 + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                 + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
+                 + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2),
+               data = newDat)
+    # rank deficiency warning
+    summary(newMod)
+    
+    # compare to version with all wolves
+    tsa34 <- update(envtDay, . ~ . + distRdSt + distStrucSt + distFeedSt
+                 + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                 + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
+                 + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2))    
+    fixef(newMod)
+    fixef(tsa34)
+    
+    # plot the NA data
+    d <- newDat %>%
+      mutate(
+        prWolf = fitted(newMod),
+        model = "Day",
+        Hunt  = hunt)    
+
+    
+
+    
+    
+    
+    
+    
+    
+    ################## deleete me              
+          
+    # day
+    d <- modDatDay %>%
+      mutate(
+        prWolf = fitted(tsa34),
+        model = "Day",
+        Hunt  = hunt)
+    
+    ggplot(filter(d, feedIn == 1), aes(x = distFeed, y = Used)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)),
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Only wolves with feed available")
+
+    
+    ggplot(d, aes(x = distFeed, y = Used)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)),
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "All wolves")                
+                
+                
+    ggplot(d, aes(x = distFeed, y = Used)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(feedIn)),
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Only wolves with feed available")
+    
+    
+    # try again removing it
+    z <- modDatDay %>%
+      mutate(distFeed <- ifelse(feedIn == 0, NA, distFeed)) %>%
+      rename(distFeedStAll = distFeedSt) %>%
+      mutate(distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T))
+    
+
+    t <- update(envtDay, . ~ . + distRdSt + distStrucSt + distFeedSt
+                 + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                 + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
+                 + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2),
+                data = z)           
+                                
+    summary(t)    
+    AIC(t, tsa34day)
+    # model was estimated. it appears the same as the old version
+    
+    zz <- z %>%
+      mutate(
+        prWolf = fitted(t),
+        model = "Day",
+        Hunt  = hunt)
+    
+    
+        ggplot(zz, aes(x = distFeed, y = Used)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)),
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "All wolves")                
+length(which(is.na(z$distFeed)))                
+                       

@@ -2251,3 +2251,77 @@ zz
                          family = binomial(logit), data = datDay,
                          nAGQ = 0, control = glmerControl(optimizer = "nloptwrap"))            
 
+    
+    
+    
+    
+################################################################################################## #  
+  
+    
+### ### ### ### ### ### ### ### ### ### 
+####  | removing feedground data from wolves far away from them  |  ####
+### ### ### ### ### ### ### ### ### ###    
+        
+        # check whether you mapped correct wolfYRs to correct data
+      test <- distDat %>%
+          filter(feedIn == TRUE)  %>%
+          dplyr::select(wolfYr, Pack) %>%
+          distinct()
+        # manually checked each one (other than those i'm familiar with) in arcmap; they're correct
+        
+        
+        
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### #
+####   | KILL SITE DATA |  ####
+### ### ### ### ### ### #
+        
+        
+        # goal 1 : make clusNearby be NA if someone typed NO or NONE
+        # so, basically just distinguish between whether the field 
+          # starts with a letter or a number, jfc why was this hard before?
+        
+        # if starts with number keep it, else NA it.
+        test <- visits
+        test$t <- ifelse(grepl(pattern = "^[[0:9]]", x = test$clusNearby), test$clusNearby, NA)
+        unique(test$t)
+        unique(test$clusNearby)
+        # newp, not picking up the numbers. tried single and double brackets
+        grepl(pattern = "^[0:9]*", x = test$clusNearby) # duh
+        
+        test$t <- ifelse(grepl(pattern = "^[0:9]*", x = test$clusNearby), test$clusNearby, NA)
+        unique(test$t)
+        unique(test$clusNearby)
+        # huh
+        
+        str(test)
+        
+        c <- c("1", "NO", "NONE", 123, NA)
+        grepl("^[0:9]*", c) # newp, T for letters
+        grepl("\\D+", c) # <3 stack
+        
+        
+        test$t <- ifelse(grepl(pattern = "\\D+", x = as.character(test$clusNearby)), test$clusNearby, NA)
+        unique(test$t)
+        unique(test$clusNearby) # wtf
+        
+        as.numeric(c) # oh duh
+        
+        test$t <- as.numeric(test$clusNearby)
+        unique(test$t) # feck
+        unique(test$clusNearby)
+        
+         
+        test$t <- ifelse(grepl(pattern = "^\\D+", x = noquote(test$clusNearby)), test$clusNearby, NA)
+        unique(test$t)
+        unique(test$clusNearby)         
+        
+        c <- test[29:33, "clusNearby"]
+        c
+        grepl("^\\D+", c)
+        test$t <- ifelse(grepl(pattern = "^\\D+", x =test$clusNearby), NA, test$clusNearby)
+        # why are you so bad at this hahaha that should've been so easy
+        
