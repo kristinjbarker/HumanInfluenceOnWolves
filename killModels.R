@@ -125,15 +125,146 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ##  
             
             
-      #### Specify global models ####
 
+    # distance to buildings and structures
+    mS <- glm(Used ~ 1 + distStrucSt + I(distStrucSt^2), family = binomial(logit), data = modDat)
+    summary(mS) # struc^2 insig
     
-    # dude there's no way you can estimate this many covariates wtf were you thinking
+    # distance to motorized routes
+    mR <- glm(Used ~ 1 + distRdSt + I(distRdSt^2), family = binomial(logit), data = modDat)
+    summary(mR) # 2 sig here
     
-    # i think best way forward is to do separate models for each of the effects of interest
-    # and just be clear that that's what you did
-    # so rest of sday is making those quick models/plots
-    # and finishing your presentation
-
+    # distance to feedgrounds
+    mF <- glm(Used ~ 1 + distFeedSt + I(distFeedSt^2), family = binomial(logit), data = modDat)
+    summary(mF) # nothing sig here
+    
+    # all 3??
+    mA <- glm(Used ~ 1 + distStrucSt + I(distStrucSt^2) 
+              + distRdSt + I(distRdSt^2)+ distFeedSt + I(distFeedSt^2)
+              , family = binomial(logit), data = modDat)
+    summary(mA)
+    # because feed isn't estimable/important i'm going to just do roads and structures
+    
+    m2 <- glm(Used ~ 1 + distStrucSt + I(distStrucSt^2) + distRdSt + I(distRdSt^2), 
+              family = binomial(logit), data = modDat)
+    summary(m2)
+    
  
+    #### fitted values ####
     
+    
+      # 
+      d <- modDat %>%
+        mutate(
+          prWolf = fitted(m2),
+          Hunt  = hunt)
+           
+
+################################################################################################## #  
+                
+    
+    
+### ### ### ### ### #
+####   | PLOTS|  ####
+### ### ### ### ### # 
+    
+    
+    ## BUILDINGS AND STRUCTURES ##
+    
+    
+    # full plot
+      pSt <- ggplot(d, aes(x = distStruc, y = Used)) +
+        geom_point(col = "black") +
+        stat_smooth(aes(x = distStruc, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Distance to buildings & structures (m)")
+      plot(pSt)
+      
+      # clean plot
+      pStB <- ggplot(d, aes(x = distStruc, y = Used)) +
+        stat_smooth(aes(x = distStruc, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 4000)) +
+        labs(y = "Pr(Use)", x = "", title = "Distance to buildings & structures (m)")
+      plot(pStB)
+      
+
+    ## ROADS ##
+    
+    
+    # full plot
+      pRd <- ggplot(d, aes(x = distRd, y = Used)) +
+        geom_point(col = "black") +
+        stat_smooth(aes(x = distRd, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Distance to buildings & Rdtures (m)")
+      plot(pRd)
+      
+      # clean combo plot
+      pRdB <- ggplot(d, aes(x = distRd, y = Used)) +
+        stat_smooth(aes(x = distStruc, y = prWolf), 
+                    method = "lm", formula = y ~ x) +
+        stat_smooth(aes(x = distRd, y = prWolf, col = "red"), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 6000)) +
+        labs(y = "Pr(Use)", x = "Distance (m)", title = "Preliminary Kill Site Model Results")
+      plot(pRdB)
+      
+
+    ## FEED ##
+    
+    
+    # full plot
+      pFd <- ggplot(d, aes(x = distFeed, y = Used)) +
+        geom_point(col = "black") +
+        stat_smooth(aes(x = distFeed, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Distance to feed ground (m)")
+      plot(pFd)
+      
+      # clean combo plot
+      pFdB <- ggplot(d, aes(x = distFeed, y = Used)) +
+        stat_smooth(aes(x = distFeed, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2))  +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 6000)) +
+        labs(y = "Pr(Use)", x = "Distance to feed ground (m)", title = "Preliminary Kill Site Model Results")
+      plot(pFdB)
+    
+    # plot without LGV (available feed only)
+      pFd2 <- ggplot(filter(d, Pack != "Lower Gros Ventre"), aes(x = distFeed, y = Used)) +
+        geom_point(col = "black") +
+        stat_smooth(aes(x = distFeed, y = prWolf), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1)) +
+        labs(y = "Pr(Use)", title = "Distance to feed ground (m)")
+      plot(pFd2)      
+      
+      
+      
+   ## COMBO ##     
+      
+      # clean combo plot
+      p3 <- ggplot(d, aes(y = Used)) +
+        stat_smooth(aes(x = distStruc, y = prWolf, col = "Buildings"), 
+                    method = "lm", formula = y ~ x) +
+        stat_smooth(aes(x = distRd, y = prWolf, col = "Routes"), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, col = "Feedgrounds"), 
+                    method = "lm", formula = y ~ poly(x, 2))  +        
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 6000)) +
+        labs(y = "Pr(Use)", x = "Distance (m)", title = "Preliminary Kill Site Model Results")
+      plot(p3)      
+      
+      
+      
+      
+                  
+      save.image("prelimKillModes.RData")
+      
+      
+      # playtime contrasting strength of effect of each
+
+      
