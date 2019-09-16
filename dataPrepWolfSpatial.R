@@ -90,10 +90,6 @@
     # winter home ranges
     winHRs <- readOGR(paste0(datDir, "/Wolf"), layer = "winHRswolf")
 
-    
-    # kill sites: used & available
-    # kills <- read.csv("killSites.csv")
-
         
      #### Raster and snowtel data #### 
     
@@ -132,11 +128,11 @@
       # structures
       strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
       
-      # # prey availability
-      # preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
-      # preyAEA <- spTransform(preyUTM, aea)
-      # 
-      # 
+      # prey availability
+      preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
+      preyAEA <- spTransform(preyUTM, aea)
+
+
       
     #### Metadata ####
       
@@ -269,42 +265,42 @@
             
         
         
-      # ## Prey availability ##
-      #   
-      #   # create blank df to store results
-      #   distPrey <- data.frame(rowNum = NA, distPrey = NA)
-      #   distPrey <- distPrey[-1,]
-      # 
-      #   
-      #   # use prey availability specific to the year when the location was recorded
-      #   yrs <- unique(locs$Year)
-      #   
-      #   for (i in 1:length(yrs)) {
-      #     
-      #     # identify year (but for early wolves, use 2008 elk distn bc that's earliest i have)
-      #     iYr <- yrs[i]
-      #     iYr2 <- ifelse(iYr < 2008, 2008, iYr)
-      #     
-      #     # pull polygon of elk distribution during that year
-      #     iElk <- preyAEA[preyAEA$id == iYr2, ]
-      #     iLocs <- locsAEA[locsAEA$Year == iYr, ]
-      # 
-      #     # calculate distance to elk polygon
-      #     distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
-      #       
-      #     # identify the shortest distance
-      #     distElkMin <- apply(distElkRaw, 2, min)
-      #   
-      #     # make it longform
-      #     distElk <- data.frame(
-      #       rowNum = names(distElkMin),
-      #       distPrey = distElkMin)
-      #   
-      #     # join to master
-      #     distPrey <- rbind(distPrey, distElk) 
-      #     
-      #   }
-      #   
+      ## Prey availability ##
+
+        # create blank df to store results
+        distPrey <- data.frame(rowNum = NA, distPrey = NA)
+        distPrey <- distPrey[-1,]
+
+
+        # use prey availability specific to the year when the location was recorded
+        yrs <- unique(locs$Year)
+
+        for (i in 1:length(yrs)) {
+
+          # identify year (but for early wolves, use 2008 elk distn bc that's earliest i have)
+          iYr <- yrs[i]
+          iYr2 <- ifelse(iYr < 2008, 2008, iYr)
+
+          # pull polygon of elk distribution during that year
+          iElk <- preyAEA[preyAEA$id == iYr2, ]
+          iLocs <- locsAEA[locsAEA$Year == iYr, ]
+
+          # calculate distance to elk polygon
+          distElkRaw <- gDistance(iLocs, iElk, byid = TRUE)
+
+          # identify the shortest distance
+          distElkMin <- apply(distElkRaw, 2, min)
+
+          # make it longform
+          distElk <- data.frame(
+            rowNum = names(distElkMin),
+            distPrey = distElkMin)
+
+          # join to master
+          distPrey <- rbind(distPrey, distElk)
+
+        }
+
         
                 
         
@@ -319,6 +315,7 @@
           left_join(distFeed, by = "rowNum") %>%
           left_join(distFeedActive, by = "rowNum") %>%
           left_join(availFeed, by = "wolfYr") %>%
+          left_join(distPrey, by = "rowNum") %>%
           left_join(distStruc, by = "rowNum") 
    
 
@@ -382,11 +379,11 @@
     #### combine all covariate data ####
     
       modDatRaw <- distDat %>%
-        dplyr::select(rowNum, distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc) %>% # , distPrey)) %>%
+        dplyr::select(rowNum, distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc, distPrey) %>%
         left_join(extSnow, by = "rowNum") %>%
         dplyr::select(wolfYr, Wolf, Pack, Used, daytime,
                         asp, can, elev, lc, rec, rug, slope, snowCm, 
-                        distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc, # distPrey, 
+                        distRd, distRdPav, distFeed, distFeedActive, feedIn, distStruc, distPrey, 
                         datetime, Date, Time, Month, Day, Year,
                         X, Y, Latitude, Longitude, rowNum)
       
@@ -468,6 +465,7 @@
       distRdPavSt = (distRdPav - mean(distRdPav))/sd(distRdPav),
       distStrucSt = (distStruc - mean(distStruc))/sd(distStruc),
       distFeedSt = (distFeed - mean(distFeed, na.rm = T))/sd(distFeed, na.rm = T),
+      distPreySt = (distPrey - mean(distPrey, na.rm = T))/sd(distPrey, na.rm = T),
       activeFeedSt = (distFeedActive - mean(distFeedActive, na.rm = T))/sd(distFeedActive, na.rm = T),
       # order landcover from most to least available
       lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
@@ -508,6 +506,6 @@
                  overwrite_layer = TRUE)
 
         
- save.image(paste0("dataPrepWolfSpatial_", today(), ".RData"))
+ save.image(paste0("./RDataFiles/dataPrepWolfSpatial_", today(), ".RData"))
         
  
