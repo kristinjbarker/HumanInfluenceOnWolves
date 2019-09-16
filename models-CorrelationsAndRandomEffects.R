@@ -121,7 +121,8 @@ rm(wd_kjb, wd_greg)
 
     dat.cor <- modDat %>%
       dplyr::select(can, elev, slope, rug, snowCm, northness,
-                    distRd, distStruc, distFeed, distFeedActive, hunt, prevHunt, tSinceHunt, tContHunt)
+                    distRd, distStruc, distFeed, distFeedActive, distPrey,
+                    hunt, prevHunt, tSinceHunt, tContHunt)
     corDat <- cor(dat.cor)
     source("pairs-panels.R"); pairs.panels(dat.cor)
 
@@ -240,8 +241,8 @@ rm(wd_kjb, wd_greg)
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + distRdSt + distStrucSt + recClass + distFeedSt + distPreySt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2) + I(distPreySt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2), 
                        family = binomial(logit), data = modDat)
@@ -252,8 +253,8 @@ rm(wd_kjb, wd_greg)
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + distRdSt + distStrucSt + recClass + distFeedSt + distPreySt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2) + I(distPreySt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
                        + (1|wolfYr), family = binomial(logit), data = modDat,
@@ -267,8 +268,8 @@ rm(wd_kjb, wd_greg)
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + distRdSt + distStrucSt + recClass + distFeedSt + distPreySt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2) + I(distPreySt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
                        + (1|Pack), family = binomial(logit), data = modDat,
@@ -283,8 +284,8 @@ rm(wd_kjb, wd_greg)
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt
                        + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
-                       + distRdSt + distStrucSt + recClass + distFeedSt
-                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
+                       + distRdSt + distStrucSt + recClass + distFeedSt + distPreySt
+                       + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2) + I(distPreySt^2)
                        + hunt*distRdSt + hunt*distStrucSt + hunt*recClass + hunt*distFeedSt
                        + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
                        + (1|Pack/wolfYr), family = binomial(logit), data = modDat,
@@ -303,6 +304,6 @@ rm(wd_kjb, wd_greg)
         aicD <- aicD[order(aicD$Delta_AICc), ] # pack only ftw
         # quick slightly-biased comparison to fixed effects only model
         AIC(nore, w, p, wNp) # pack only ftw
-        write.csv(aicD, file = "aic-RE-structure.csv", row.names = FALSE)         
+        write.csv(aicD, file = "./ResultsAIC/aic-RE-structure.csv", row.names = FALSE)         
 
                    
