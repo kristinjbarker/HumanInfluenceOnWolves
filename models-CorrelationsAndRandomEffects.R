@@ -124,6 +124,7 @@ rm(wd_kjb, wd_greg)
                     distRd, distStruc, distFeed, distFeedActive, distPrey,
                     hunt, prevHunt, tSinceHunt, tContHunt)
     corDat <- cor(dat.cor)
+    write.csv(corDat, "correlationsAll.csv")
     source("pairs-panels.R"); pairs.panels(dat.cor)
 
 
@@ -143,7 +144,7 @@ rm(wd_kjb, wd_greg)
     cor5 <- corDat
     cor5[cor5 < 0.50] <- NA
     cor5
-    # now also distStruc+distRd, but only 0.53
+    write.csv(cor5, "correlations0.5.csv")
 
 
     # take-home: choose slope over ruggedness
