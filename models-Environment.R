@@ -119,8 +119,48 @@ rm(wd_kjb, wd_greg)
 ### ### ### ### ### ### ### ### ### ### ### ### ##
 ####   | DETERMINE FIXED EFFECTS STRUCTURE |  ####
 ### ### ### ### ### ### ### ### ### ### ### ### ##  
+    
+    
+    
+  #### Determine whether global model should consist of environment or prey availability  ####
+    
+    
+      ## Environment-only model ##
+        
+        globEnvt <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
+                         + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
+                         + snowSt:canSt + snowSt:slopeSt + snowSt:northnessSt + snowSt:elevSt
+                         + snowSt:I(slopeSt*slopeSt) + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+                         + (1|Pack), family = binomial(logit), data = modDat,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                                optCtrl=list(maxfun=2e4),
+                                                calc.derivs = FALSE)) 
+ 
+        
+      ## Prey-only models ##
+        
+        globPrey <- glmer(Used ~ 1
+                         + distPreySt + I(distPreySt*distPreySt) + snowSt:distPreySt + snowSt:I(distPreySt*distPreySt)
+                         + (1|Pack), family = binomial(logit), data = modDat,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                                optCtrl=list(maxfun=2e4),
+                                                calc.derivs = FALSE)) 
+
+        
+        
+      #### Compare environment and prey to see which best explains overall distribution ####
+        
+        aictab(c(globEnvt, globPrey), modnames = c("envt", "prey"))
+        invisible(plot(roc(factor(ifelse(modDat$Used == 1, 1, 0)), fitted(globEnvt)), print.thres = c(.1, .5), col = "red", print.auc = T))
+        invisible(plot(roc(factor(ifelse(modDat$Used == 1, 1, 0)), fitted(globPrey)), print.thres = c(.1, .5), col = "red", print.auc = T))
+        # definitely environment only (deltaAICc = 833.97; AUC = 0.658 vs 0.528)
+        
+  
+        
+        
+  #### Define global models split by time of day  ####            
             
-            
+        
       #### Specify global models ####
         
         globDay <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
@@ -150,7 +190,8 @@ rm(wd_kjb, wd_greg)
                    control = glmerControl(optimizer = "bobyqa", 
                                           optCtrl=list(maxfun=2e4),
                                           calc.derivs = FALSE)) 
-            
+        
+
         
       #### Evaluate relative covariate importance ####
         
@@ -164,48 +205,40 @@ rm(wd_kjb, wd_greg)
           aictab(c(globDay, day2), modnames = c("global", "m2")) # day2 ftw 
           summary(day2)
           
-          # also remove snow:northness
-          day3 <- update(day2, . ~ . - snowSt:northnessSt)
-          aictab(c(day3, day2), modnames = c("m3", "m2")) # day2 ftw (much better)
-          summary(day2)
-          
-          # keep snow:northness. remove snow:slope and snow:slope2
-          day4 <- update(day2, . ~ . - snowSt:slopeSt - snowSt:I(slopeSt * slopeSt))
-          aictab(c(day4, day2), modnames = c("m4", "m2")) # day4, but pretty similar
-          summary(day4)
+          # also remove snow:slope and snow:slope2
+          day3 <- update(day2, . ~ . - snowSt:slopeSt - snowSt:I(slopeSt * slopeSt))
+          aictab(c(day3, day2), modnames = c("m3", "m2")) # tie
+          summary(day3)
           
           # keep the snow:slopes but remove lc instead
-          day5 <- update(day2, . ~ . - lcClass)
-          aictab(c(day4, day2, day5), modnames = c("m4", "m2", "m5")) # day4 and day5 similar 
-          summary(day5)
+          day4 <- update(day2, . ~ . - lcClass)
+          aictab(c(day4, day3, day2), modnames = c("m4", "m3", "m2")) # day4 and day3 similar 
+          summary(day4)
           
           # remove both snow:slopes and landcover
-          day6 <- update(day4, . ~ . - lcClass)
-          aictab(c(day4, day2, day5, day6), modnames = c("m4", "m2", "m5", "m6")) # ugh so similar
+          day5 <- update(day3, . ~ . - lcClass)
+          aictab(c(day4, day2, day5, day3), modnames = c("m4", "m2", "m5", "m3")) # ugh so similar
+          summary(day5)
           
 
-          
           # store results of all models
-          aicDay <- data.frame(aictab(cand.set = c(globDay, day2, day3, day4, day5, day6), 
-                            modnames = c("Global", "m2", "m3", "m4", "m5", "m6")))
+          aicDay <- data.frame(aictab(cand.set = c(globDay, day2, day3, day4, day5), 
+                            modnames = c("Global", "m2", "m3", "m4", "m5")))
           aicDay <- aicDay[order(aicDay$Delta_AICc), ]
-          write.csv(aicDay, file = "aic-envt-Day.csv", row.names = FALSE)      
+          write.csv(aicDay, file = "./ResultsAIC/aic-envt-Day.csv", row.names = FALSE)      
           
           
-          #### decide between day3, day4, day5, day6 ####
+          #### decide between day2, day3, day4, day5 ####
           
             # residual plots
             par(mfrow = c(2,2))
+            binnedplot(fitted(day2), residuals(day2, type = "response"), main = "day2")
             binnedplot(fitted(day3), residuals(day3, type = "response"), main = "day3")
-            binnedplot(fitted(day4), residuals(day3, type = "response"), main = "day4")
+            binnedplot(fitted(day4), residuals(day4, type = "response"), main = "day4")
             binnedplot(fitted(day5), residuals(day5, type = "response"), main = "day5")
-            binnedplot(fitted(day6), residuals(day6, type = "response"), main = "day6")
             par(mfrow = c(1,1))
             
-            # either day5 or day6 based on these
-            # day 5 has more outliers so i'm rolling with 6
-            
-            # day6, final answer
+            # day 5 has no outliers so i'm rolling with that
 
 
             
@@ -239,18 +272,18 @@ rm(wd_kjb, wd_greg)
           aicNight <- data.frame(aictab(cand.set = c(globNight, night2, night3, night4, night5), 
                             modnames = c("Global", "m2", "m3", "m4", "m5")))
           aicNight <- aicNight[order(aicNight$Delta_AICc), ]
-          write.csv(aicNight, file = "aic-envt-Night.csv", row.names = FALSE) 
+          write.csv(aicNight, file = "./ResultsAIC/aic-envt-Night.csv", row.names = FALSE) 
           
           
-          #### decide between night4 and night5 #### 
+          #### decide between night2 and night3 #### 
 
             # residual plots
             par(mfrow = c(2,1))
-            binnedplot(fitted(night4), residuals(night4, type = "response"), main = "night4")
-            binnedplot(fitted(night5), residuals(night5, type = "response"), main = "night5")
+            binnedplot(fitted(night2), residuals(night2, type = "response"), main = "night2")
+            binnedplot(fitted(night3), residuals(night3, type = "response"), main = "night3")
             par(mfrow = c(1,1))
             
-            # night3, final answer
+            # night2 fewer outliers and less patterning
           
 
             
@@ -265,7 +298,7 @@ rm(wd_kjb, wd_greg)
           
           # also remove snow:northness and snow:northness2
           c3 <- update(c2, . ~ . - northnessSt:snowSt  - snowSt:I(northnessSt * northnessSt))
-          aictab(c(c2, c3), modnames = c("c2", "c3")) # c2 ftw
+          aictab(c(c2, c3), modnames = c("c2", "c3")) # tie
           summary(c2)
         
           # keep snow:northness; just remove snow:northness2
@@ -278,18 +311,19 @@ rm(wd_kjb, wd_greg)
           aicCrep <- data.frame(aictab(cand.set = c(globCrep, c2, c3, c4), 
                             modnames = c("Global", "c2", "c3", "c4")))
           aicCrep <- aicCrep[order(aicCrep$Delta_AICc), ]
-          write.csv(aicCrep, file = "aic-envt-Crep.csv", row.names = FALSE) 
+          write.csv(aicCrep, file = "./ResultsAIC/aic-envt-Crep.csv", row.names = FALSE) 
           
           
-          ## decide between c2 and c4 ##
+          ## decide between c2, c3, and c4 ##
                
             # residual plots
-            par(mfrow = c(2,1))
-            binnedplot(fitted(c2), residuals(night4, type = "response"), main = "crep2")
-            binnedplot(fitted(c4), residuals(night5, type = "response"), main = "crep4")
+            par(mfrow = c(3,1))
+            binnedplot(fitted(c2), residuals(c2, type = "response"), main = "crep2")
+            binnedplot(fitted(c3), residuals(c3, type = "response"), main = "crep3")
+            binnedplot(fitted(c4), residuals(c4, type = "response"), main = "crep4")
             par(mfrow = c(1,1))
             
-            # crep2, final answer
+            # crep3 has fewest outliers
             
  
 ################################################################################################## #  
@@ -304,25 +338,25 @@ rm(wd_kjb, wd_greg)
 
       #### Specify top environmental models ####
           
-          # envtDay <- day5
-          # envtNight <- night4
-          # envtCrep <- c2
+          envtDay <- day5
+          envtNight <- night2
+          envtCrep <- c3
           
 
         ## ROC AUC ##
           
           # 0.657 day | 0.678 night | 0.659 crep
-          invisible(plot(roc(factor(ifelse(datDay$Used == 1, 1, 0)), fitted(day5)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
-          invisible(plot(roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(night4)), print.thres = c(.1, .5), col = "red", print.auc = T))  
-          invisible(plot(roc(factor(ifelse(datCrep$Used == 1, 1, 0)), fitted(c2)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
+          invisible(plot(roc(factor(ifelse(datDay$Used == 1, 1, 0)), fitted(envtDay)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
+          invisible(plot(roc(factor(ifelse(datNight$Used == 1, 1, 0)), fitted(envtNight)), print.thres = c(.1, .5), col = "red", print.auc = T))  
+          invisible(plot(roc(factor(ifelse(datCrep$Used == 1, 1, 0)), fitted(envtCrep)), print.thres = c(.1, .5), col = "red", print.auc = T)) 
           
           
         ## predictive accuracy @ >50% ##  
           
-          # 61.71% day | 63.39% night | 60.71% crep
-          confusionMatrix(factor(as.character(ifelse(fitted(day5) > 0.5, "Yes", "No"))), factor(ifelse(datDay$Used == 1, "Yes", "No")), positive = "Yes")
-          confusionMatrix(factor(as.character(ifelse(fitted(night4) > 0.5, "Yes", "No"))), factor(ifelse(datNight$Used == 1, "Yes", "No")), positive = "Yes")         
-          confusionMatrix(factor(as.character(ifelse(fitted(c2) > 0.5, "Yes", "No"))), factor(ifelse(datCrep$Used == 1, "Yes", "No")), positive = "Yes")         
+          # 61.71% day | 63.33% night | 60.68% crep
+          confusionMatrix(factor(as.character(ifelse(fitted(envtDay) > 0.5, "Yes", "No"))), factor(ifelse(datDay$Used == 1, "Yes", "No")), positive = "Yes")
+          confusionMatrix(factor(as.character(ifelse(fitted(envtNight) > 0.5, "Yes", "No"))), factor(ifelse(datNight$Used == 1, "Yes", "No")), positive = "Yes")         
+          confusionMatrix(factor(as.character(ifelse(fitted(envtCrep) > 0.5, "Yes", "No"))), factor(ifelse(datCrep$Used == 1, "Yes", "No")), positive = "Yes")         
 
           
     
@@ -433,20 +467,7 @@ rm(wd_kjb, wd_greg)
 
         # remove Pack and Intercept
         dBothSub <- filter(dBoth, !grepl("Pack|Intercept|\\*|\\:", Covariate))
-        
-        # # order covariates more intuitively across x-axis
-        # dBothSub2 <- dBothSub %>%
-        #   filter(!grepl("lc", Covariate)) %>%
-        #   mutate(Covariate = factor(Covariate, 
-        #     levels=c("elevSt", "canSt", "northnessSt", "slopeSt", "snowSt", 
-        #              "I(slopeSt * snowSt)", "I(northnessSt * snowSt)")))
-        # 
-        # # plot OR +- 95%CI colored by day/night - continuous covariates
-        # pORs <- ggplot(dBothSub2, aes(x = Covariate, y = OR, colour = timing)) +
-        #   geom_errorbar(aes(ymin = ciLow, ymax = ciHigh), width = 0.1) +
-        #   geom_point() +
-        #   geom_hline(aes(yintercept=1)) +
-        #   labs(title = "Univariate")
+
         
         
         # plot OR +- 95%CI colored by day/night - categorical covariate
@@ -474,11 +495,3 @@ save.image(paste0("environmentalModels-", today(), ".RData"))
 
 ################################################################################################## #  
   
-    
-    
-### ### ### ### ### ### ### ### #
-####   | HUMAN MODELS |  ####
-### ### ### ### ### ### ### ### #    
-
-# standardize covariates
-                  
