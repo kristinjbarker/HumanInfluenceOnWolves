@@ -107,12 +107,12 @@
       
     envtNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-                       + snowSt:canSt + snowSt:elevSt + snowSt:I(elevSt*elevSt) 
+                       + snowSt:canSt + snowSt:northnessSt + snowSt:elevSt
+                       + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
                        + (1|Pack), family = binomial(logit), data = modDatNight,
                        control = glmerControl(optimizer = "bobyqa", 
-                                            optCtrl=list(maxfun=3e4),
-                                            calc.derivs = FALSE))       
-
+                                              optCtrl=list(maxfun=2e4),
+                                              calc.derivs = FALSE)) 
                
 ################################################################################################## #  
   
@@ -616,11 +616,11 @@
     
       ## area under the roc curve ##
       invisible(plot(roc(factor(ifelse(modDatNight$Used == 1, 1, 0)), fitted(topNight)), 
-                     print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.700
+                     print.thres = c(.1, .5), col = "red", print.auc = T)) # auc = 0.701
       
       ## predictive accuracy @ >50% ##  
       confusionMatrix(factor(as.character(ifelse(fitted(topNight) > 0.5, "Yes", "No"))), 
-                      factor(ifelse(modDatNight$Used == 1, "Yes", "No")), positive = "Yes") # 66.05%
+                      factor(ifelse(modDatNight$Used == 1, "Yes", "No")), positive = "Yes") # 65.74%
     
       
       ## binned residual plots ##
