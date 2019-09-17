@@ -106,12 +106,12 @@
     # from models-Environment.R   
     envtCrep <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
-               + snowSt:canSt + snowSt:northnessSt + snowSt:elevSt
-               + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
+               + snowSt:canSt + snowSt:elevSt
+               + snowSt:I(elevSt*elevSt) 
                + (1|Pack), family = binomial(logit), data = modDatCrep,
                control = glmerControl(optimizer = "bobyqa", 
-                                      optCtrl=list(maxfun=3e4),
-                                      calc.derivs = FALSE))       
+                                      optCtrl=list(maxfun=2e4),
+                                      calc.derivs = FALSE))     
 
                
 ################################################################################################## #  
@@ -620,7 +620,7 @@
       
       ## predictive accuracy @ >50% ##  
       confusionMatrix(factor(as.character(ifelse(fitted(topCrep) > 0.5, "Yes", "No"))), 
-                      factor(ifelse(modDatCrep$Used == 1, "Yes", "No")), positive = "Yes") # 63.28%
+                      factor(ifelse(modDatCrep$Used == 1, "Yes", "No")), positive = "Yes") # 63.43%
     
       
       ## binned residual plots ##
