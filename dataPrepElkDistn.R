@@ -146,14 +146,23 @@
     elkKDE <- getverticeshr(elkUD, percent = 99)
     plot(elkKDE, add = TRUE, col = "red")
     
+    ## make 95pct kdes per year
+    elkKDEsm <- getverticeshr(elkUD, percent = 95)
+    plot(elkKDEsm, add = TRUE, col = "red")    
+    
     # export
     writeOGR(elkKDE,
              dsn = paste0(datDir, "/Elk"),
-             layer = "elkDistn_2008-2019",
+             layer = "elkDistn99_2008-2019",
              driver = "ESRI Shapefile",
              overwrite_layer = TRUE)
 
-    
+    # export
+    writeOGR(elkKDEsm,
+             dsn = paste0(datDir, "/Elk"),
+             layer = "elkDistn95_2008-2019",
+             driver = "ESRI Shapefile",
+             overwrite_layer = TRUE)    
     
     
 ################################################################################################## #  
