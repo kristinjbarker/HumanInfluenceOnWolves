@@ -98,6 +98,10 @@
       modDatCrep <- filter(modDat, daytime == "crep")
 
 
+    #### Raw rasters for predict ####
+      
+      
+      
       
 ################################################################################################## #  
   
@@ -124,7 +128,7 @@
                  + hunt*canSt)    
     
       
-    # night - tsb73, tsa32, tsb89, tsa34 (from models-Night.R)
+    # night - tsb73 (from models-Night.R)
     envtNight <- glmer(Used ~ 1 + lcClass + canSt + slopeSt + elevSt + northnessSt + snowSt
                        + I(slopeSt*slopeSt) + I(elevSt*elevSt) + I(northnessSt*northnessSt) 
                        + snowSt:canSt + snowSt:elevSt + snowSt:I(elevSt*elevSt) 
@@ -178,6 +182,9 @@
         # effect slightly significant in the model where it's included
         # so can't just dismiss it
 
+        
+ 
+        
         
 ################################################################################################## #  
     
@@ -291,6 +298,8 @@
 ### ### ### ### ###  ### ### ### ### ### 
         
 
+
+          
     
     #### distance to buildings & structures ####
     
@@ -317,10 +326,8 @@
                     method = "lm", formula = y ~ x)
       plot(nSt)
       
+
       
-      # layering plot for easier conference explanation
-      
-    
     #### distance to motorized route  #### 
     
       # full plot
@@ -361,6 +368,32 @@
         coord_cartesian(ylim = c(0, 0.85), xlim = c(0, 30000)) +
         labs(y = "Pr(Use)", x = "", title = "Distance to feedgrounds (m)")
       plot(sFd)    
+      
+      
+      # zoomed in plot (to look at dist)
+      sFdZ <- ggplot(filter(m34, feedIn == 1), aes(x = plot, y = Used, colour = model)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.85), xlim = c(0, 3000)) +
+        labs(y = "Pr(Use)", x = "", title = "Distance to feedgrounds (m)")
+      plot(sFdZ) 
+      # for all indivs?
+      sFdZ <- ggplot(m34, aes(x = plot, y = Used, colour = model)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.85), xlim = c(0, 3000)) +
+        labs(y = "Pr(Use)", x = "", title = "Distance to feedgrounds (m)")
+      plot(sFdZ)
+      
+      
+      # all wolves (not just those with feedgrounds available)
+      sFdA <- ggplot(m34, aes(x = plot, y = Used, colour = model)) +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.85), xlim = c(0, 10000)) +
+        labs(y = "Pr(Use)", x = "", title = "Distance to feedgrounds (m)")
+      plot(sFdA) 
+      # flatline at pretty much 0.5
 
 
        
@@ -376,24 +409,199 @@
           scale_x_discrete(labels=c("Herbaceous","NoVeg","Riparian","Shrub"))      
       
  
-################################################################################################## #  
+      
+      
+###  ####  ####  ###  ####  ####  ###  ####  ####  ###  ####  ####  ###  ####  ###  
   
-    
+
+      #### Conference Plots ####
+      
+      
+        ## setup ##
+          
+          # set black theme
+          theme_black = function(base_size = 12, base_family = "") {
+            theme_grey(base_size = base_size, base_family = base_family) %+replace%
+              theme(
+                # Specify axis options
+                axis.line = element_blank(),  
+                axis.text.x = element_text(color = "white"),  
+                axis.text.y = element_text(color = "white"),  
+                axis.ticks = element_line(color = "white", size  =  0.2),  
+                axis.title.x = element_text(size = base_size, color = "white", margin = margin(0, 10, 0, 0)),  
+                axis.title.y = element_text(size = base_size, color = "white", angle = 90, margin = margin(0, 10, 0, 0)),  
+                axis.ticks.length = unit(0.3, "lines"),   
+                # Specify legend options
+                legend.background = element_rect(color = NA, fill = "black"),  
+                legend.key = element_rect(color = "white",  fill = "black"),  
+                legend.key.size = unit(1.2, "lines"),  
+                legend.key.height = NULL,  
+                legend.key.width = NULL,      
+                legend.text = element_text(color = "white"),  
+                ####legend.title = element_text(size = base_size*0.8, face = "bold", hjust = 0, color = "white"),  
+                legend.title = element_blank(),
+                legend.position = "right",  
+                legend.text.align = NULL,  
+                legend.title.align = NULL,  
+                legend.direction = "vertical",  
+                legend.box = NULL, 
+                legend.spacing.x = unit(0.3, 'cm'),
+                # Specify panel options
+                panel.background = element_rect(fill = "black", color  =  NA),  
+                panel.border = element_rect(fill = NA, color = "white"),  
+                panel.grid.major = element_line(color = "grey35"),  
+                panel.grid.minor = element_line(color = "grey20"),  
+                panel.margin = unit(0.5, "lines"),   
+                # Specify facetting options
+                strip.background = element_rect(fill = "grey30", color = "grey10"),  
+                strip.text.x = element_text(size = base_size*0.8, color = "white"),  
+                strip.text.y = element_text(size = base_size*0.8, color = "white",angle = -90),  
+                # Specify plot options
+                plot.background = element_rect(color = "black", fill = "black"),  
+                plot.title = element_text(size = base_size*2, color = "white"),  
+                plot.margin = unit(rep(1, 4), "lines")
+              )
+          }          
+               
+      
+        # format data to make legend easier
+        ggDat <- m34 %>%
+          mutate(Hunt = ifelse(Hunt == 0, "Not hunted", "Hunted"))
+        
+      
+      #### Buildings ####
+      b1 <- ggplot(filter(ggDat, daytime == "day" & Hunt == "Not hunted"), 
+                   aes(x = distStruc, y = Used, colour = model)) +
+        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2), color = "blue") +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+        theme_black() +
+        guides(linetype = guide_legend(order = 1))
+      b1
+      b2 <- ggplot(filter(ggDat, daytime == "day"), 
+                   aes(x = distStruc, y = Used, colour = model)) +
+        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2), color = "green") +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+        theme_black() +
+        guides(linetype = guide_legend(order = 1))
+      b2
+
+      b4 <- ggplot(filter(ggDat, daytime == "day" | daytime == "crep"), 
+                   aes(x = distStruc, y = Used, colour = model)) +
+        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+        theme_black() +
+        guides(linetype = guide_legend(order = 1))
+      b4  
+      
+      b5 <- ggplot(ggDat, 
+                   aes(x = distStruc, y = Used, colour = model)) +
+        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+        theme_black() +
+        guides(linetype = guide_legend(order = 1)) 
+      b5       
+      
+
+  
+         ggsave(b5, filename = "./Plots/bldgs4.jpg",
+           dpi = 600,
+           units = "in",
+           width = 13,
+           height = 7)   
+      
+      
+            
+      
+      
+      
+###  ####  ####  ###  ####  ####  ###  ####  ####  ###  ####  ####  ###  ####  ###  
+ 
+      
+      
+           
+ 
+################################################################################################## #  
+      
     
 ### ### ### ### ### ### ### ### ### ### # 
 ####   | POST HOC INVESTIGATIONS |  ####
 ### ### ### ### ### ### ### ### ### ### #
       
-      
+
+    #### crossing i's and dotting t's ####          
+            
       # quick double check that envt-only not supported
       AIC(envtDay, tsa34day)
       AIC(envtNight, tsb73night)
       AIC(envtCrep, tsa42crep)
+      # yeah not even close
       
       
       
-   
+    #### re-evaluate feed only using wolves to whom it's available ####    
     
+        # rerun models using only those wolves
+        tDay <- update(tsa34day, data = filter(modDatDay, feedIn == 1))
+        tNight <- update(tsb73night, data = filter(modDatNight, feedIn == 1))
+        tCrep <- update(tsa34crep, data = filter(modDatCrep, feedIn == 1))
+
+        # data for plots
+        td <- filter(modDatDay, feedIn == 1) %>%
+          mutate(
+            prWolf = fitted(tDay),
+            model = "Day",
+            Hunt  = hunt)
+        tn <- filter(modDatNight, feedIn == 1) %>%
+          mutate(
+            prWolf = fitted(tNight),
+            model = "Night",
+            Hunt = prevHunt)
+        tc <- filter(modDatCrep, feedIn == 1) %>%
+          mutate(
+            prWolf = fitted(tCrep),
+            model = "Crepuscular",
+            Hunt = hunt)
+        tRes <- bind_rows(td, tn, tc)          
+          
+      # full plot
+      tFd <- ggplot(tRes, aes(x = distFeed, y = Used, colour = model)) +
+        geom_point(col = "black") +
+        stat_smooth(aes(x = distFeed, y = prWolf, linetype = as.factor(Hunt)),
+                    method = "lm", formula = y ~ poly(x, 2)) +
+        coord_cartesian(ylim = c(0, 1), xlim = c(0, 30000)) +
+        labs(y = "Pr(Use)", title = "Wolves w/ Feedgrounds Available")
+      plot(tFd)  
+      
+      # compare to other
+      plot(pFd)
+      
+      # looks almost exactly the same
+      
+
+      
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ###  ### ### ##
+####   | DATA SUMMARIES |  ####
+### ### ### ### ###  ### ### ##
+      
+      
+      # sample sizes
+      length(unique(modDat$Pack))
+      length(unique(modDat$Wolf))
+      length(unique(modDat$wolfYr))
+      length(unique(modDat$Year))
+      sort(unique(modDat$Year))
                         
 ################################################################################################## #  
       
