@@ -1865,4 +1865,42 @@
         coord_cartesian(ylim = c(0, 1)) +
         labs(y = "Pr(Use)", title = "All wolves")                
 length(which(is.na(z$distFeed)))                
-                       
+                   
+
+
+                
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### 
+####   | PREY AVAIL VS ENVT+PREY |  ####
+### ### ### ### ### ### ### ### ###     
+            
+      #### Specify prey-only models ####     
+        
+        preyDay <- glmer(Used ~ 1 + distPreySt + I(distPreySt*distPreySt)
+                         + (1|Pack), family = binomial(logit), data = datDay,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                          optCtrl=list(maxfun=2e4),
+                                          calc.derivs = FALSE)) 
+        
+        preyNight <- glmer(Used ~ 1 + distPreySt + I(distPreySt*distPreySt)
+                         + (1|Pack), family = binomial(logit), data = datNight,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                          optCtrl=list(maxfun=2e4),
+                                          calc.derivs = FALSE)) 
+        
+        
+        preyCrep <- glmer(Used ~ 1 + distPreySt + I(distPreySt*distPreySt)
+                         + (1|Pack), family = binomial(logit), data = datCrep,
+                         control = glmerControl(optimizer = "bobyqa", 
+                                          optCtrl=list(maxfun=2e4),
+                                          calc.derivs = FALSE))       
+        
+        
+      #### Compare prey-only with environment ####  
+        summary(preyDay)
+        # prey not as impt as id anticipated
+        AIC(preyDay, globDay)
+        # glob much better; rolling with original plan
