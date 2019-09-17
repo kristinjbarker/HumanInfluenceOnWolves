@@ -129,7 +129,7 @@
       strucLL <- readOGR(paste0(datDir, "/Human/Structures"), layer = 'strucsLL')
       
       # prey availability
-      preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn_2008-2019')
+      preyUTM <- readOGR(paste0(datDir, "/Elk"), layer = 'elkDistn95_2008-2019')
       preyAEA <- spTransform(preyUTM, aea)
 
 
