@@ -88,19 +88,13 @@
         # year as numeric
         Year = as.numeric(Year),
         # order landcover from most to least available
-        lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")),
-        # use open recreation as baseline; reorder for more intuitive plot interpretation
-        recClass = factor(recClass, levels = c("allOT", "nomotoOT", "noOT", "noRec")))
+        lcClass = factor(lcClass, levels = c("Forest", "Shrub", "Herbaceous", "Riparian", "NoVeg")))
   
       # split out day/night/crepuscular time periods
       modDatDay <- filter(modDat, daytime == "day")  
       modDatNight <- filter(modDat, daytime == "night")
       modDatCrep <- filter(modDat, daytime == "crep")
 
-
-    #### Raw rasters for predict ####
-      
-      
       
       
 ################################################################################################## #  
@@ -121,7 +115,7 @@
                  + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                  + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
                  + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2))     
-    tsa35day <- update(envtDay, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
+    tsa35day <- update(envtDay, . ~ . + distRdSt + distStrucSt + distFeedSt
                  + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                  + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
                  + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2)
@@ -147,7 +141,7 @@
                + snowSt:I(elevSt*elevSt) + snowSt:I(northnessSt*northnessSt)
                + (1|Pack), family = binomial(logit), data = modDatCrep,
                control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=3e4), calc.derivs = FALSE))
-    tsa34crep <- update(envtCrep, . ~ . + distRdSt + distStrucSt + recClass + distFeedSt
+    tsa34crep <- update(envtCrep, . ~ . + distRdSt + distStrucSt + distFeedSt
                  + I(distRdSt^2) + I(distStrucSt^2) + I(distFeedSt^2)
                  + hunt*distRdSt + hunt*distStrucSt + hunt*distFeedSt
                  + hunt*I(distRdSt^2) + hunt*I(distStrucSt^2) + hunt*I(distFeedSt^2))
@@ -428,8 +422,8 @@
                 axis.text.x = element_text(color = "white"),  
                 axis.text.y = element_text(color = "white"),  
                 axis.ticks = element_line(color = "white", size  =  0.2),  
-                axis.title.x = element_text(size = base_size, color = "white", margin = margin(0, 10, 0, 0)),  
-                axis.title.y = element_text(size = base_size, color = "white", angle = 90, margin = margin(0, 10, 0, 0)),  
+                axis.title.x = element_text(size = base_size*1.5, color = "white", margin = margin(0, 10, 0, 0)),  
+                axis.title.y = element_text(size = base_size*1.5, color = "white", angle = 90, margin = margin(0, 10, 0, 0)),  
                 axis.ticks.length = unit(0.3, "lines"),   
                 # Specify legend options
                 legend.background = element_rect(color = NA, fill = "black"),  
@@ -470,53 +464,124 @@
         
       
       #### Buildings ####
-      b1 <- ggplot(filter(ggDat, daytime == "day" & Hunt == "Not hunted"), 
-                   aes(x = distStruc, y = Used, colour = model)) +
-        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
-                    method = "lm", formula = y ~ poly(x, 2), color = "blue") +
-        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
-        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
-        theme_black() +
-        guides(linetype = guide_legend(order = 1))
-      b1
-      b2 <- ggplot(filter(ggDat, daytime == "day"), 
-                   aes(x = distStruc, y = Used, colour = model)) +
-        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
-                    method = "lm", formula = y ~ poly(x, 2), color = "green") +
-        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
-        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
-        theme_black() +
-        guides(linetype = guide_legend(order = 1))
-      b2
-
-      b4 <- ggplot(filter(ggDat, daytime == "day" | daytime == "crep"), 
-                   aes(x = distStruc, y = Used, colour = model)) +
-        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
-                    method = "lm", formula = y ~ poly(x, 2)) +
-        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
-        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
-        theme_black() +
-        guides(linetype = guide_legend(order = 1))
-      b4  
+        
+          b1 <- ggplot(filter(ggDat, daytime == "day" & Hunt == "Not hunted"), 
+                       aes(x = distStruc, y = Used, colour = model)) +
+            stat_smooth(aes(x = distStruc, y = prWolf), 
+                        method = "lm", formula = y ~ poly(x, 2), linetype = "dashed") +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+           b1
+           ggsave(b1, filename = "./Plots/bldgs1.jpg", dpi = 600, units = "in", width = 13, height = 7)
+          
+          
+          b2 <- ggplot(filter(ggDat, daytime == "day"), 
+                       aes(x = distStruc, y = Used, colour = model)) +
+            stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2), color = "green") +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          b2
+          ggsave(b2, filename = "./Plots/bldgs2.jpg", dpi = 600, units = "in", width = 13, height = 7)
+    
+          b3 <- ggplot(filter(ggDat, daytime == "day" | daytime == "crep"), 
+                       aes(x = distStruc, y = Used, colour = model)) +
+            stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2)) +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          b3 
+          ggsave(b3, filename = "./Plots/bldgs3.jpg", dpi = 600, units = "in", width = 13, height = 7)
+          
+          b4 <- ggplot(ggDat, 
+                       aes(x = distStruc, y = Used, colour = model)) +
+            stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2)) +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          b4   
+          ggsave(b4, filename = "./Plots/bldgs4.jpg", dpi = 600, units = "in", width = 13, height = 7)
       
-      b5 <- ggplot(ggDat, 
-                   aes(x = distStruc, y = Used, colour = model)) +
-        stat_smooth(aes(x = distStruc, y = prWolf, linetype = as.factor(Hunt)), 
-                    method = "lm", formula = y ~ poly(x, 2)) +
-        coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
-        labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Buildings") +
-        theme_black() +
-        guides(linetype = guide_legend(order = 1)) 
-      b5       
-      
 
+      #### Roads ####
+        
+          r1 <- ggplot(filter(ggDat, daytime == "day" & Hunt == "Not hunted"), 
+                       aes(x = distRd, y = Used, colour = model)) +
+            stat_smooth(aes(x = distRd, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2), linetype = "dashed") +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Route") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+           r1
+           ggsave(r1, filename = "./Plots/rds1.jpg", dpi = 600, units = "in", width = 13, height = 7)
+          
+          
+          r2 <- ggplot(filter(ggDat, daytime == "day"), 
+                       aes(x = distRd, y = Used, colour = model)) +
+            stat_smooth(aes(x = distRd, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2), color = "green") +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Route") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          r2
+          ggsave(r2, filename = "./Plots/rds2.jpg", dpi = 600, units = "in", width = 13, height = 7)
+    
+          r3 <- ggplot(filter(ggDat, daytime == "day" | daytime == "crep"), 
+                       aes(x = distRd, y = Used, colour = model)) +
+            stat_smooth(aes(x = distRd, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2)) +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Route") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          r3 
+          ggsave(r3, filename = "./Plots/rds3.jpg", dpi = 600, units = "in", width = 13, height = 7)
+          
+          r4 <- ggplot(ggDat, 
+                       aes(x = distRd, y = Used, colour = model)) +
+            stat_smooth(aes(x = distRd, y = prWolf, linetype = as.factor(Hunt)), 
+                        method = "lm", formula = y ~ poly(x, 2)) +
+            coord_cartesian(ylim = c(0, 0.75), xlim = c(0, 8000)) +
+            labs(y = "Pr(WolfUse)", x = "meters", title = "Distance to Route") +
+            theme_black() +
+            guides(linetype = guide_legend(order = 2, override.aes = list(col = 'white')))  +
+            scale_color_manual(name = "",
+                          breaks = c("Day", "Crepuscular", "Night"),
+                          values = c("Day" = "green", "Crepuscular" = "orange", "Night" = "blue"))
+          r4   
+          ggsave(r4, filename = "./Plots/rds4.jpg", dpi = 600, units = "in", width = 13, height = 7)
   
-         ggsave(b5, filename = "./Plots/bldgs4.jpg",
-           dpi = 600,
-           units = "in",
-           width = 13,
-           height = 7)   
-      
       
             
       
