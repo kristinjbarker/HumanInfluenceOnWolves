@@ -1904,3 +1904,32 @@ length(which(is.na(z$distFeed)))
         # prey not as impt as id anticipated
         AIC(preyDay, globDay)
         # glob much better; rolling with original plan
+        
+        
+        
+        
+        
+        
+                
+################################################################################################## #  
+  
+    
+    
+### ### ### ### ### ### ### ### ### 
+####   | SAMPLE SIZE FOR MULTI YR INDIV |  ####
+### ### ### ### ### ### ### ### ###      
+        
+        
+        length(unique(modDat$Wolf))
+        hm <- modDat %>%
+          group_by(Wolf) %>%
+          summarise(nYr = length(unique(Year)))
+        length(which(hm$nYr > 1))
+        hm2 <- filter(hm, nYr > 1)
+        
+        mas <- modDat[modDat$Wolf %in% hm2$Wolf, ]
+        mas2 <- mas %>%
+          dplyr::select(Wolf, Year) %>%
+          distinct()
+          
+        
